@@ -16,4 +16,4 @@ RUN pip install -r requirements.txt
 COPY . .
 WORKDIR .
 
-CMD ["gunicorn", "--bind", ":8000", "wsgi:app"]
+CMD ["python3", "card_filling_bot.py"]
