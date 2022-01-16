@@ -1,0 +1,1 @@
+update fill_scope set chat_id = -758880114 where scope_id = 1;

@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  mariadb-dev:
+    image: mariadb
+    container_name: cardfillingbot-dev-mariadb
+    volumes:
+      # - ./card_filling_bot/mariadb/CardFillingBot-1-schema.sql:/docker-entrypoint-initdb.d/CardFillingBot-1-schema.sql
+      # - ./card_filling_bot/mariadb/CardFillingBot-2-categories.sql:/docker-entrypoint-initdb.d/CardFillingBot-2-categories.sql
+      - ./card_filling_bot/mariadb/CardFillingBot-0-dumpwithdata.sql:/docker-entrypoint-initdb.d/CardFillingBot-0-dumpwithdata.sql
+      - ./card_filling_bot/mariadb/CardFillingBot-3-user.sql:/docker-entrypoint-initdb.d/CardFillingBot-3-user.sql
+      - ./card_filling_bot/mariadb/CardFillingBot-4-testingscope.sql:/docker-entrypoint-initdb.d/CardFillingBot-4-testingscope.sql
+    environment:
+      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
+      - MARIADB_DATABASE=CardFillingBot
+  redis-dev:
+    build:
+      dockerfile: Dockerfile-redis
+      context: .
+    image: nkuznetsov44/cardfillingbot-redis:${ENVIRONMENT}
+    container_name: cardfillingbot-dev-redis
+    volumes:
+      - ./card_filling_bot/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+  cardfillingbot:
+    build:
+      dockerfile: Dockerfile-cardfillingbot
+      context: .
+    image: nkuznetsov44/cardfillingbot:${ENVIRONMENT}
+    container_name: cardfillingbot-dev
+    depends_on:
+      - mariadb-dev
+      - redis-dev
+    ports:
+      - ${HOST_EXPOSED_PORT}:8000
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - MYSQL_USER=card_filling_bot
+      - MYSQL_PASSWORD=card_filling_bot_dev
+      - MYSQL_HOST=mariadb-dev
+      - MYSQL_DATABASE=CardFillingBot
+      - REDIS_HOST=redis-dev
+      - REDIS_DB=0
+      - REDIS_PASSWORD=card_filling_bot_dev
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - MINOR_PROPORTION_USER_ID=${MINOR_PROPORTION_USER_ID}
+      - MAJOR_PROPORTION_USER_ID=${MAJOR_PROPORTION_USER_ID}

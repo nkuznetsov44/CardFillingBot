@@ -1,0 +1,13 @@
+__pycache__/
+.idea/
+*env/
+*log.txt
+*Thumbs.db
+bin/
+lib/
+share/
+pyvenv.cfg
+*.log
+startup-*-local.sh
+.env
+mariadb/CardFillingBot-0-dumpwithdata.sql
