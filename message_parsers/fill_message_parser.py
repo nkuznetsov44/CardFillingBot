@@ -1,13 +1,12 @@
 from typing import Optional
 import re
-from datetime import datetime
-from telegramapi.types import Message
+from aiogram.types import Message
 from message_parsers import IMessageParser, IParsedMessage
 from dto import FillDto, UserDto
 from services.card_fill_service import CardFillService
 
 
-number_regexp = re.compile(r'[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?')
+number_regexp = re.compile(r'[-+]?[.]?[\d]+(?:,\d\d\d)*[.]?\d*(?:[eE][-+]?\d+)?')
 
 
 class FillMessageParser(IMessageParser[FillDto]):
@@ -28,11 +27,11 @@ class FillMessageParser(IMessageParser[FillDto]):
             else:
                 description = before_phrase + after_phrase
         if cnt == 1:
-            scope = self.card_fill_service.get_scope(message.chat.chat_id)
+            scope = self.card_fill_service.get_scope(message.chat.id)
             fill = FillDto(
                 id=None,
                 user=UserDto.from_telegramapi(message.from_user),
-                fill_date=datetime.fromtimestamp(message.date),
+                fill_date=message.date,
                 amount=float(amount),
                 description=description,
                 category=None,

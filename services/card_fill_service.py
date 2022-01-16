@@ -1,5 +1,5 @@
+import logging
 from typing import Optional, List, Dict, TYPE_CHECKING
-from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import create_engine
@@ -11,13 +11,6 @@ from dto import (
     CategorySumOverPeriodDto, ProportionOverPeriodDto, SummaryOverPeriodDto,
     FillScopeDto, BudgetDto
 )
-if TYPE_CHECKING:
-    from logging import Logger
-
-
-@dataclass(frozen=True)
-class CardFillServiceSettings:
-    logger: 'Logger'
 
 
 def proportion_to_fraction(proportion: float) -> float:
@@ -39,8 +32,8 @@ def fraction_to_proportion(fraction: float) -> float:
 
 
 class CardFillService:
-    def __init__(self, settings: CardFillServiceSettings):
-        self.logger = settings.logger
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self._db_engine = create_engine(database_uri, pool_recycle=3600)
         self.logger.info('Initialized db_engine for card fill service')
         self.DbSession = scoped_session(sessionmaker(bind=self._db_engine))
@@ -139,6 +132,7 @@ class CardFillService:
             db_session.add(category_obj)
             db_session.commit()
             self.logger.info(f'Create category {category_obj}')
+            return CategoryDto.from_model(category_obj)
         finally:
             self.DbSession.remove()
 

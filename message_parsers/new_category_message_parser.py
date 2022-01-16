@@ -1,19 +1,17 @@
-from typing import Optional, Tuple, TYPE_CHECKING
+import logging
+from typing import Optional, Tuple
 from dto import CategoryDto, FillDto
-from telegramapi.types import Message
+from aiogram.types import Message
 from message_parsers import IMessageParser, IParsedMessage
 from services.cache_service import CacheService
 
-if TYPE_CHECKING:
-    from logging import Logger
-
 
 class NewCategoryMessageParser(IMessageParser[Tuple[CategoryDto, FillDto]]):
-    def __init__(self, cache_service: CacheService, logger: 'Logger') -> None:
+    def __init__(self, cache_service: CacheService) -> None:
+        self.logger = logging.getLogger(__name__)
         self.cache_service = cache_service
-        self.logger = logger
 
-    def parse(self, message: Message) -> Optional[IParsedMessage[CategoryDto]]:
+    def parse(self, message: Message) -> Optional[IParsedMessage[Tuple[CategoryDto, FillDto]]]:
         if not message.reply_to_message:
             return None
         if not message.reply_to_message.text:

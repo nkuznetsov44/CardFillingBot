@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from datetime import datetime
 from enum import Enum
-from telegramapi.types import User as TelegramapiUser
+from aiogram.types import User as TelegramapiUser
 from model import CardFill, FillScope, TelegramUser, Category, Budget
 
 
@@ -69,7 +69,7 @@ class UserDto:
     @staticmethod
     def from_telegramapi(telegramapi_user: TelegramapiUser) -> 'UserDto':
         return UserDto(
-            id=telegramapi_user.user_id,
+            id=telegramapi_user.id,
             is_bot=telegramapi_user.is_bot,
             first_name=telegramapi_user.first_name,
             last_name=telegramapi_user.last_name,
@@ -95,7 +95,7 @@ class FillDto:
     id: Optional[int]
     user: UserDto
     fill_date: datetime
-    amount: str
+    amount: float
     description: Optional[str]
     category: Optional[CategoryDto]
     scope: FillScopeDto

@@ -1,5 +1,6 @@
 import os
 
+telegram_token = os.getenv('TELEGRAM_TOKEN')
 
 mysql_user = os.getenv('MYSQL_USER')
 mysql_password = os.getenv('MYSQL_PASSWORD')
@@ -21,9 +22,9 @@ major_proportion_user_id = int(os.getenv('MAJOR_PROPORTION_USER_ID'))
 
 scheduler_threads = 1
 
-NEED_RESET_WEBHOOK = bool(os.getenv('NEED_RESET_WEBHOOK', False))
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')
-if not WEBHOOK_URL:
-    raise Exception('Environment variable WEBHOOK_URL is not set')
+webhook_host = os.getenv('WEBHOOK_HOST')
+webhook_path = os.getenv('WEBHOOK_PATH', '')
+webhook_url = f'{webhook_host}/{webhook_path}'
 
-host_exposed_port = os.getenv('HOST_EXPOSED_PORT')
+webapp_host = '0.0.0.0'
+webapp_port = 8000

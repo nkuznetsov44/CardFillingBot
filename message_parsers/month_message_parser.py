@@ -1,6 +1,6 @@
 from typing import Optional, List
 import re
-from telegramapi.types import Message
+from aiogram.types import Message
 from dto import Month
 from message_parsers import IMessageParser, IParsedMessage
 

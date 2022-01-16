@@ -1,6 +1,6 @@
 from typing import Optional, TypeVar, Generic
 from abc import ABC, abstractmethod
-from telegramapi.types import Message
+from aiogram.types import Message
 
 
 T = TypeVar('T')
