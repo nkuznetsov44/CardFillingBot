@@ -26,7 +26,7 @@ app = Flask(__name__)
 app.config.from_object(Config())
 
 
-# Getting gunicorn logger
+# If running from gunicorn get its logger
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
     app.logger.handlers = gunicorn_logger.handlers
@@ -74,3 +74,10 @@ def receive_update():
         else:
             app.logger.exception('Unexpected error')
         return 'not ok'
+
+
+# if running directly starting flask app
+if __name__ == '__main__':
+    app.logger.setLevel(logging.INFO)
+    from settings import host_exposed_port
+    app.run(host='0.0.0.0', port=host_exposed_port)

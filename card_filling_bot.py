@@ -9,12 +9,12 @@ from dto import (
     ProportionOverPeriodDto
 )
 from message_parsers import IParsedMessage
-from message_parsers.month_message_parser import Month, MonthMessageParser
+from message_parsers.month_message_parser import MonthMessageParser
 from message_parsers.fill_message_parser import FillMessageParser
 from message_parsers.new_category_message_parser import NewCategoryMessageParser
 from services.card_fill_service import CardFillService, CardFillServiceSettings
 from services.cache_service import CacheService, CacheServiceSettings
-# from services.graph_service import GraphService
+from services.graph_service import GraphService
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -56,8 +56,9 @@ class CardFillingBot(Bot):
             logger=settings.logger
         )
         self.cache_service = CacheService(cache_service_settings)
-        # self.graph_service = GraphService()
+        self.graph_service = GraphService()
 
+        """
         def test_func():
             print('Im test func scheduled by scheduler')
 
@@ -71,6 +72,7 @@ class CardFillingBot(Bot):
             name='test_job',
             coalesce=False
         )
+        """
 
     @message_handler()
     def basic_message_handler(self, message: Message) -> None:

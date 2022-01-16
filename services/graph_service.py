@@ -1,7 +1,10 @@
 from typing import List, Optional
 from io import BytesIO
+import matplotlib
 from matplotlib import pyplot as plt
 from dto import CategorySumOverPeriodDto
+
+matplotlib.use('Agg')
 
 
 class GraphService:

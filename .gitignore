@@ -8,6 +8,5 @@ lib/
 share/
 pyvenv.cfg
 *.log
-startup-*-local.sh
 .env
 mariadb/CardFillingBot-0-dumpwithdata.sql

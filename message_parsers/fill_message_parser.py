@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from telegramapi.types import Message
 from message_parsers import IMessageParser, IParsedMessage
-from dto import FillDto, UserDto, FillScopeDto
+from dto import FillDto, UserDto
 from services.card_fill_service import CardFillService
 
 
