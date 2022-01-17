@@ -1,6 +1,6 @@
 import logging
 from typing import List, Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from dto import Month, FillDto, CategoryDto, UserDto
 from message_parsers import IParsedMessage
@@ -11,8 +11,9 @@ from message_formatters import (
     month_names, format_user_fills, format_monthly_report, format_yearly_report
 )
 from app import (
-    dp, bot, card_fill_service, cache_service, graph_service, scheduler, start_app
+    dp, bot, card_fill_service, cache_service, graph_service, start_app
 )
+from services.schedule_service import schedule_message
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 @dp.message_handler()
 async def basic_message_handler(message: Message) -> None:
+    schedule_message(
+        chat_id=int(message.chat.id),
+        text=f'*Scheduled echo*: {message.text}',
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text='test', callback_data='test')]]
+        ),
+        parse_mode=ParseMode.MARKDOWN_V2,
+        dt=datetime.now() + timedelta(minutes=1)
+    )
     if message.text:
         logger.info(f'Received message {message.text}')
 

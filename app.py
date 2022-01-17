@@ -1,5 +1,4 @@
 import logging
-from uuid import uuid4
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher import Dispatcher
 from aiogram.bot import Bot
@@ -7,7 +6,7 @@ from aiogram.utils.executor import start_webhook
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from settings import (
     webhook_path, webhook_url, webapp_host, webapp_port,
-    telegram_token, database_uri
+    telegram_token, database_uri, scheduler_clear_jobs
 )
 from services.card_fill_service import CardFillService
 from services.cache_service import CacheService
@@ -33,7 +32,7 @@ scheduler = AsyncIOScheduler({
     'apscheduler.executors.default': {
         'class': 'apscheduler.executors.asyncio:AsyncIOExecutor',
     },
-    'apscheduler.timezone': 'Europe/Moscow'
+    'apscheduler.timezone': 'Europe/Moscow',
 })
 
 
@@ -44,19 +43,9 @@ async def send_scheduled_message(text: str, chat_id: int) -> None:
 
 async def on_startup(_: Dispatcher) -> None:
     await bot.set_webhook(webhook_url)
-    scheduler.remove_all_jobs()
-    scheduler.add_job(
-        func=send_scheduled_message,
-        trigger='interval',
-        seconds=10,
-        # trigger='date',
-        # run_date=datetime(2022, 1, 16, 23, 28, 0),
-        args=('test111', 86070242),
-        kwargs={},
-        id=str(uuid4()),
-        name='test_job',
-        coalesce=False
-    )
+    scheduler.start()
+    if scheduler_clear_jobs:
+        scheduler.remove_all_jobs()
 
 
 async def on_shutdown(_: Dispatcher) -> None:
@@ -64,7 +53,6 @@ async def on_shutdown(_: Dispatcher) -> None:
 
 
 def start_app() -> None:
-    scheduler.start()
     start_webhook(
         dispatcher=dp,
         webhook_path=webhook_path,

@@ -20,7 +20,7 @@ redis_password = os.getenv('REDIS_PASSWORD')
 minor_proportion_user_id = int(os.getenv('MINOR_PROPORTION_USER_ID'))
 major_proportion_user_id = int(os.getenv('MAJOR_PROPORTION_USER_ID'))
 
-scheduler_threads = 1
+scheduler_clear_jobs = int(os.getenv('SCHEDULER_CLEAR_JOBS'))
 
 webhook_host = os.getenv('WEBHOOK_HOST')
 webhook_path = os.getenv('WEBHOOK_PATH', '')
