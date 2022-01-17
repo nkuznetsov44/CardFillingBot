@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, List, Dict
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import create_engine

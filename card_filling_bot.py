@@ -1,80 +1,21 @@
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 from datetime import datetime
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
-from aiogram.dispatcher import Dispatcher
-from aiogram.bot import Bot
-from aiogram.utils.executor import start_webhook
-from settings import (
-    webhook_host, webhook_path, webhook_url, webapp_host, webapp_port,
-    telegram_token, database_uri, scheduler_threads
-)
-from dto import (
-    Month, FillDto, CategoryDto, UserDto, SummaryOverPeriodDto,
-    CategorySumOverPeriodDto, UserSumOverPeriodDto, FillScopeDto,
-    ProportionOverPeriodDto
-)
+from dto import Month, FillDto, CategoryDto, UserDto
 from message_parsers import IParsedMessage
 from message_parsers.month_message_parser import MonthMessageParser
 from message_parsers.fill_message_parser import FillMessageParser
 from message_parsers.new_category_message_parser import NewCategoryMessageParser
-from services.card_fill_service import CardFillService
-from services.cache_service import CacheService
-from services.graph_service import GraphService
+from message_formatters import (
+    month_names, format_user_fills, format_monthly_report, format_yearly_report
+)
+from app import (
+    dp, bot, card_fill_service, cache_service, graph_service, scheduler, start_app
+)
 
-
-logging.basicConfig(level=logging.INFO)
-
-bot = Bot(token=telegram_token)
-dp = Dispatcher(bot)
-dp.middleware.setup(LoggingMiddleware())
-
-
-async def on_startup(_: Dispatcher) -> None:
-    await bot.set_webhook(webhook_url)
-
-
-async def on_shutdown(_: Dispatcher) -> None:
-    await bot.delete_webhook(webhook_url)
-
-
-
-month_names = {
-    Month.january: 'Январь',
-    Month.february: 'Февраль',
-    Month.march: 'Март',
-    Month.april: 'Апрель',
-    Month.may: 'Май',
-    Month.june: 'Июнь',
-    Month.july: 'Июль',
-    Month.august: 'Август',
-    Month.september: 'Сентябрь',
-    Month.october: 'Октябрь',
-    Month.november: 'Ноябрь',
-    Month.december: 'Декабрь'
-}
 
 logger = logging.getLogger(__name__)
-card_fill_service = CardFillService()
-cache_service = CacheService()
-graph_service = GraphService()
-
-"""
-def test_func():
-    print('Im test func scheduled by scheduler')
-
-test_job = self.scheduler.add_job(
-    func=test_func,
-    trigger='date',
-    run_date=datetime(2022, 1, 16, 11, 30, 0),
-    args=None,
-    kwargs=None,
-    id='test_job_1',
-    name='test_job',
-    coalesce=False
-)
-"""
 
 
 @dp.message_handler()
@@ -285,20 +226,6 @@ async def confirm_new_category(callback_query: CallbackQuery) -> None:
     await bot.send_message(chat_id=callback_query.message.chat.id, text=text)
 
 
-def _format_user_fills(fills: List[FillDto], from_user: UserDto, months: List[Month], year: int) -> str:
-    m_names = ', '.join(map(month_names.get, months))
-    if len(fills) == 0:
-        text = f'Не было пополнений в {m_names} {year}.'
-    else:
-        text = (
-            f'Пополнения @{from_user.username} за {m_names} {year}:\n' +
-            '\n'.join(
-                [f'{fill.fill_date}: {fill.amount} {fill.description} {fill.category.name}' for fill in fills]
-            )
-        )
-    return text
-
-
 @dp.callback_query_handler(lambda cq: cq.data == 'my')
 async def my_fills_current_year(callback_query: CallbackQuery) -> None:
     months = cache_service.get_months_for_message(callback_query.message)
@@ -307,7 +234,7 @@ async def my_fills_current_year(callback_query: CallbackQuery) -> None:
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     fills = card_fill_service.get_user_fills_in_months(from_user, months, year, scope)
 
-    message_text = _format_user_fills(fills, from_user, months, year)
+    message_text = format_user_fills(fills, from_user, months, year)
     previous_year = InlineKeyboardButton(
         text='Предыдущий год', callback_data='fills_previous_year'
     )
@@ -325,51 +252,8 @@ async def my_fills_previous_year(callback_query: CallbackQuery) -> None:
     from_user = UserDto.from_telegramapi(callback_query.from_user)
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     fills = card_fill_service.get_user_fills_in_months(from_user, months, previous_year, scope)
-    message_text = _format_user_fills(fills, from_user, months, previous_year)
+    message_text = format_user_fills(fills, from_user, months, previous_year)
     await bot.send_message(chat_id=callback_query.message.chat.id, text=message_text)
-
-
-def _format_by_user_block(data: List[UserSumOverPeriodDto], scope: FillScopeDto) -> str:
-    if scope.scope_type == 'PRIVATE':
-        return '\n'.join([f'{user_sum.amount:.0f}' for user_sum in data])
-    return (
-        '\n'.join([f'@{user_sum.username}: {user_sum.amount:.0f}' for user_sum in data])
-        .replace('_', '\\_')
-    )
-
-
-def _format_by_category_block(data: List[CategorySumOverPeriodDto], display_limits: bool) -> str:
-    rows = []
-    for category_sum in data:
-        text = f'  - {category_sum.category_name}: {category_sum.amount:.0f}'
-        if display_limits and category_sum.monthly_limit:
-            text += f' (из {category_sum.monthly_limit:.0f})'
-        rows.append(text)
-    return '_Категории:_\n' + '\n'.join(rows)
-
-
-def _format_proportions_block(data: ProportionOverPeriodDto) -> str:
-    return (
-        f'_Пропорции:_\n  - текущая: {data.proportion_actual:.2f}\n'
-        f'  - ожидаемая: {data.proportion_target:.2f}'
-    ).replace('.', '\\.')
-
-
-def _format_monthly_report(data: Dict[Month, SummaryOverPeriodDto], year: int, scope: FillScopeDto) -> str:
-    message_text = ''
-    for month, data_month in data.items():
-        message_text += f'*{month_names[month]} {year}:*\n'
-        message_text += _format_by_user_block(data_month.by_user, scope) + '\n\n'
-        message_text += _format_by_category_block(data_month.by_category, display_limits=True)
-        if scope.scope_type == 'GROUP':
-            message_text += '\n\n' + _format_proportions_block(data_month.proportions)
-        message_text += '\n\n'
-    return (
-        message_text
-        .replace('-', '\\-')
-        .replace('(', '\\(')
-        .replace(')', '\\)')
-    )
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'stat')
@@ -379,7 +263,7 @@ async def per_month_current_year(callback_query: CallbackQuery) -> None:
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     data = card_fill_service.get_monthly_report(months, year, scope)
 
-    message_text = _format_monthly_report(data, year, scope)
+    message_text = format_monthly_report(data, year, scope)
     previous_year = InlineKeyboardButton(text='Предыдущий год', callback_data='previous_year')
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[previous_year]])
 
@@ -414,7 +298,7 @@ async def per_month_previous_year(callback_query: CallbackQuery) -> None:
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     data = card_fill_service.get_monthly_report(months, previous_year, scope)
 
-    message_text = _format_monthly_report(data, previous_year, scope)
+    message_text = format_monthly_report(data, previous_year, scope)
     if len(months) == 1:
         month = months[0]
         diagram = graph_service.create_by_category_diagram(
@@ -443,24 +327,11 @@ async def per_year(callback_query: CallbackQuery) -> None:
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     data = card_fill_service.get_yearly_report(year, scope)
     diagram = graph_service.create_by_category_diagram(data.by_category, name=str(year))
-
-    caption = f'*За {year} год:*\n'
-    caption += _format_by_user_block(data.by_user, scope) + '\n\n'
-    caption += _format_by_category_block(data.by_category, display_limits=False)
-    if scope.scope_type == 'GROUP':
-        caption += '\n\n' + _format_proportions_block(data.proportions)
-    caption = caption.replace('-', '\\-')
+    caption = format_yearly_report(data, year, scope)
     await bot.send_photo(
         callback_query.message.chat.id, photo=diagram, caption=caption, parse_mode=ParseMode.MARKDOWN_V2
     )
 
 
 if __name__ == '__main__':
-    start_webhook(
-        dispatcher=dp,
-        webhook_path=webhook_path,
-        on_startup=on_startup,
-        on_shutdown=on_shutdown,
-        host=webapp_host,
-        port=webapp_port
-    )
+    start_app()
