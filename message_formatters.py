@@ -1,7 +1,8 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
+from datetime import datetime
 from dto import (
     Month, FillDto, UserDto, FillScopeDto, UserSumOverPeriodDto, CategorySumOverPeriodDto,
-    ProportionOverPeriodDto, SummaryOverPeriodDto
+    ProportionOverPeriodDto, SummaryOverPeriodDto, BudgetDto
 )
 
 
@@ -30,10 +31,10 @@ def format_user_fills(fills: List[FillDto], from_user: UserDto, months: List[Mon
     """
     m_names = ', '.join(map(month_names.get, months))
     if len(fills) == 0:
-        text = f'Не было пополнений в {m_names} {year}.'
+        text = f'Не было трат в {m_names} {year}.'
     else:
         text = (
-            f'Пополнения @{from_user.username} за {m_names} {year}:\n' +
+            f'Траты @{from_user.username} за {m_names} {year}:\n' +
             '\n'.join(
                 [f'{fill.fill_date}: {fill.amount} {fill.description} {fill.category.name}' for fill in fills]
             )
@@ -117,3 +118,22 @@ def format_yearly_report(data: SummaryOverPeriodDto, year: int, scope: FillScope
     if scope.scope_type == 'GROUP':
         caption += '\n\n' + format_proportions_block(data.proportions)
     return caption.replace('-', '\\-')
+
+
+def get_current_month_name() -> str:
+    current_month = Month(datetime.now().month)
+    return month_names[current_month]
+
+
+def format_fill_confirmed(
+    fill: FillDto, budget: Optional[BudgetDto], current_category_usage: Optional[float]
+) -> str:
+    reply_text = f'Принято {fill.amount}р. от @{fill.user.username}'
+    if fill.description:
+        reply_text += f': {fill.description}'
+    reply_text += f', категория: {fill.category.name}.'
+    if budget:
+        reply_text += (
+            f'\nИспользовано {current_category_usage.amount:.0f} из {current_category_usage.monthly_limit:.0f}.'
+        )
+    return reply_text

@@ -8,7 +8,8 @@ from message_parsers.month_message_parser import MonthMessageParser
 from message_parsers.fill_message_parser import FillMessageParser
 from message_parsers.new_category_message_parser import NewCategoryMessageParser
 from message_formatters import (
-    month_names, format_user_fills, format_monthly_report, format_yearly_report
+    month_names, format_user_fills, format_monthly_report, format_yearly_report,
+    get_current_month_name, format_fill_confirmed
 )
 from app import (
     dp, bot, card_fill_service, cache_service, graph_service, start_app
@@ -21,15 +22,6 @@ logger = logging.getLogger(__name__)
 
 @dp.message_handler()
 async def basic_message_handler(message: Message) -> None:
-    schedule_message(
-        chat_id=int(message.chat.id),
-        text=f'*Scheduled echo*: {message.text}',
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text='test', callback_data='test')]]
-        ),
-        parse_mode=ParseMode.MARKDOWN_V2,
-        dt=datetime.now() + timedelta(minutes=1)
-    )
     if message.text:
         logger.info(f'Received message {message.text}')
 
@@ -77,23 +69,18 @@ async def handle_fill_parsed_message(parsed_message: IParsedMessage[FillDto]) ->
     fill = parsed_message.data
     try:
         fill = card_fill_service.handle_new_fill(fill)
-        reply_text = f'Принято {fill.amount}р. от @{fill.user.username}'
-        if fill.description:
-            reply_text += f': {fill.description}'
-        reply_text += f', категория: {fill.category.name}.'
-
         budget = card_fill_service.get_budget_for_category(fill.category, fill.scope)
-        if budget:
-            current_category_usage = card_fill_service.get_current_month_budget_usage_for_category(
-                fill.category, fill.scope
-            )
-            reply_text += (
-                f'\nИспользовано {current_category_usage.amount:.0f} из {current_category_usage.monthly_limit:.0f}.'
-            )
+        current_category_usage = card_fill_service.get_current_month_budget_usage_for_category(
+            fill.category, fill.scope
+        )
+        reply_text = format_fill_confirmed(fill, budget, current_category_usage)
 
         change_category_button = InlineKeyboardButton(text='Сменить категорию', callback_data='show_category')
-        delete_fill_button = InlineKeyboardButton(text='Удалить пополнение', callback_data='delete_fill')
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[[change_category_button], [delete_fill_button]])
+        delete_fill_button = InlineKeyboardButton(text='Удалить', callback_data='delete_fill')
+        schedule_fill_button = InlineKeyboardButton(text='Запланировать', callback_data='schedule_fill')
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[[change_category_button], [delete_fill_button], [schedule_fill_button]]
+        )
         sent_message = await bot.send_message(
             chat_id=parsed_message.original_message.chat.id,
             text=reply_text,
@@ -103,14 +90,14 @@ async def handle_fill_parsed_message(parsed_message: IParsedMessage[FillDto]) ->
     except:
         await bot.send_message(
             chat_id=parsed_message.original_message.chat.id,
-            text='Ошибка добавления пополнения.'
+            text='Ошибка добавления записи.'
         )
-        logger.exception('Ошибка добавления пополнения')
+        logger.exception('Ошибка добавления записи.')
 
 
 async def handle_months_parsed_message(parsed_message: IParsedMessage[List[Month]]) -> None:
     months = parsed_message.data
-    my = InlineKeyboardButton(text='Мои пополнения', callback_data='my')
+    my = InlineKeyboardButton(text='Мои затраты', callback_data='my')
     stat = InlineKeyboardButton(text='Отчет за месяцы', callback_data='stat')
     yearly_stat = InlineKeyboardButton(text='С начала года', callback_data='yearly_stat')
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[my], [stat], [yearly_stat]])
@@ -151,15 +138,16 @@ async def show_category(callback_query: CallbackQuery) -> None:
     ])
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
-    reply_text = f'Выберите категорию для пополнения {fill.amount} р.'
+    reply_text = f'Принято {fill.amount}р. от @{fill.user.username}.\nВыберите категорию'
     if fill.description:
-        reply_text += f' ({fill.description})'
-    sent_message = await bot.send_message(
+        reply_text += f' для <{fill.description}>'
+    reply_text += ':'
+    await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
         text=reply_text,
         reply_markup=keyboard
     )
-    cache_service.set_fill_for_message(sent_message, fill)
 
 
 @dp.callback_query_handler(lambda cq: cq.data.startswith('change_category'))
@@ -168,52 +156,51 @@ async def change_category(callback_query: CallbackQuery) -> None:
     fill = cache_service.get_fill_for_message(callback_query.message)
     fill = card_fill_service.change_category_for_fill(fill.id, category_code)
 
-    reply_text = f'Категория пополнения {fill.amount} р.'
-    if fill.description:
-        reply_text += f' ({fill.description})'
-    reply_text += f' изменена на "{fill.category.name}".'
-
     budget = card_fill_service.get_budget_for_category(fill.category, fill.scope)
-    if budget:
-        current_category_usage = card_fill_service.get_current_month_budget_usage_for_category(
-            fill.category, fill.scope
-        )
-        reply_text += (
-            f'\nИспользовано {current_category_usage.amount:.0f} из {current_category_usage.monthly_limit:.0f}.'
-        )
+    current_category_usage = card_fill_service.get_current_month_budget_usage_for_category(
+        fill.category, fill.scope
+    )
+    reply_text = format_fill_confirmed(fill, budget, current_category_usage)
 
     change_category_button = InlineKeyboardButton(text='Сменить категорию', callback_data='show_category')
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[change_category_button]])
-    sent_message = await bot.send_message(
+    delete_fill_button = InlineKeyboardButton(text='Удалить', callback_data='delete_fill')
+    schedule_fill_button = InlineKeyboardButton(text='Запланировать', callback_data='schedule_fill')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[change_category_button], [delete_fill_button], [schedule_fill_button]]
+    )
+    await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
         text=reply_text,
         reply_markup=keyboard
     )
-    cache_service.set_fill_for_message(sent_message, fill)
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'delete_fill')
 async def delete_fill(callback_query: CallbackQuery) -> None:
     fill = cache_service.get_fill_for_message(callback_query.message)
     card_fill_service.delete_fill(fill)
-    await bot.send_message(
+    await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
-        text=f'Пополнение {fill.amount} р. ({fill.description}) удалено.'
+        message_id=callback_query.message.message_id,
+        text=f'Запись {fill.amount} р. ({fill.description}) удалена.',
+        reply_markup=None
     )
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'new_category')
 async def create_new_category(callback_query: CallbackQuery) -> None:
     fill = cache_service.get_fill_for_message(callback_query.message)
-    sent_message = await bot.send_message(
+    await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
         text=(
-            f'Создание категории для пополнения: {fill.amount} р. ({fill.description}).\n'
+            f'Создание категории для записи: {fill.amount} р. ({fill.description}).\n'
             'Ответом на это сообщение пришлите название, код и пропорцию для новой категории через запятую, '
             'например "Еда, FOOD, 0.8".'
-        )
+        ),
+        reply_markup=None
     )
-    cache_service.set_fill_for_message(sent_message, fill)
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'confirm_new_category')
@@ -223,17 +210,21 @@ async def confirm_new_category(callback_query: CallbackQuery) -> None:
     try:
         card_fill_service.create_new_category(category)
         fill = card_fill_service.change_category_for_fill(fill_id=fill.id, target_category_code=category.code)
-        text = (
-            f'Создана новая категория "{category.name}".\n'
-            f'Категория пополнения {fill.amount} р.'
+        budget = card_fill_service.get_budget_for_category(fill.category, fill.scope)
+        current_category_usage = card_fill_service.get_current_month_budget_usage_for_category(
+            fill.category, fill.scope
         )
-        if fill.description:
-            text += f' ({fill.description})'
-        text += f' изменена на "{category.name}".'
+        text = format_fill_confirmed(fill, budget, current_category_usage)
+        text += f'\nСоздана новая категория "{category.name}".'
     except:
         text = 'Ошибка создания категории.'
         logger.exception('Ошибка создания категории')
-    await bot.send_message(chat_id=callback_query.message.chat.id, text=text)
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        text=text,
+        reply_markup=None
+    )
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'my')
@@ -249,10 +240,12 @@ async def my_fills_current_year(callback_query: CallbackQuery) -> None:
         text='Предыдущий год', callback_data='fills_previous_year'
     )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[previous_year]])
-    sent_message = await bot.send_message(
-        chat_id=callback_query.message.chat.id, text=message_text, reply_markup=keyboard
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        text=message_text,
+        reply_markup=keyboard
     )
-    cache_service.set_months_for_message(sent_message, months)
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'fills_previous_year')
@@ -263,7 +256,11 @@ async def my_fills_previous_year(callback_query: CallbackQuery) -> None:
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     fills = card_fill_service.get_user_fills_in_months(from_user, months, previous_year, scope)
     message_text = format_user_fills(fills, from_user, months, previous_year)
-    await bot.send_message(chat_id=callback_query.message.chat.id, text=message_text)
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        text=message_text
+    )
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'stat')
@@ -340,6 +337,89 @@ async def per_year(callback_query: CallbackQuery) -> None:
     caption = format_yearly_report(data, year, scope)
     await bot.send_photo(
         callback_query.message.chat.id, photo=diagram, caption=caption, parse_mode=ParseMode.MARKDOWN_V2
+    )
+
+
+@dp.callback_query_handler(lambda cq: cq.data == 'schedule_fill')
+async def schedule_fill(callback_query: CallbackQuery) -> None:
+    fill = cache_service.get_fill_for_message(callback_query.message)
+    text = f'Выберите планируемую дату для траты {fill.amount} р. ({fill.description}): {fill.category.name}.'
+    now = datetime.now()
+    eom = datetime(year=now.year, month=now.month + 1, day=1) - timedelta(days=1)
+    days = range(now.day, eom.day + 1)
+    keyboard_buttons = []
+    buttons_per_row = 6
+    for i in range(0, len(days), buttons_per_row):
+        buttons_group = []
+        for day in days[i:i + buttons_per_row]:
+            buttons_group.append(InlineKeyboardButton(text=f'{day}', callback_data=f'schedule_day{day}'))
+        keyboard_buttons.append(buttons_group)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        text=text,
+        reply_markup=keyboard
+    )
+
+
+@dp.callback_query_handler(lambda cq: cq.data.startswith('schedule_day'))
+async def schedule_day(callback_query: CallbackQuery) -> None:
+    fill = cache_service.get_fill_for_message(callback_query.message)
+    day = int(callback_query.data.replace('schedule_day', ''))
+    scheduled_fill_date = datetime(
+        year=datetime.now().year, month=datetime.now().month, day=day,
+        hour=19, minute=0, second=0
+    )
+    card_fill_service.change_date_for_fill(fill, scheduled_fill_date)
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        text=(
+            f'Трата {fill.amount} р. ({fill.description}): {fill.category.name} запланирована на '
+            f'{get_current_month_name()}, {day}. Она будет учитываться в статистике за текущий месяц. '
+            f'В день траты придет запрос для подтверждения.'
+        ),
+        reply_markup=None
+    )
+    schedule_message(
+        chat_id=int(callback_query.message.chat.id),
+        text=f'Оповещение о запланированной трате {fill.amount} р. ({fill.description}). Она состоялась?',
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[
+                InlineKeyboardButton(text='Да', callback_data='scheduled_fill_callback_yes'),
+                InlineKeyboardMarkup(text='Нет', callback_data='scheduled_fill_callback_no')
+            ]]
+        ),
+        dt=scheduled_fill_date,
+        context={
+            'fill_id': fill.id
+        }
+    )
+
+
+@dp.callback_query_handler(lambda cq: cq.data == 'scheduled_fill_callback_yes')
+async def scheduled_fill_callback_yes(callback_query: CallbackQuery) -> None:
+    context = cache_service.get_context_for_message(callback_query.message)
+    fill = card_fill_service.get_fill_by_id(context['fill_id'])
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        reply_markup=None,
+        text=f'Трата {fill.amount} р. ({fill.description}) зафиксирована в {fill.fill_date}.'
+    )
+
+
+@dp.callback_query_handler(lambda cq: cq.data == 'scheduled_fill_callback_no')
+async def scheduled_fill_callback_no(callback_query: CallbackQuery) -> None:
+    context = cache_service.get_context_for_message(callback_query.message)
+    fill = card_fill_service.get_fill_by_id(context['fill_id'])
+    card_fill_service.delete_fill(fill)
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        reply_markup=None,
+        text=f'Запись {fill.amount} р. ({fill.description}) в {fill.fill_date} удалена.'
     )
 
 

@@ -1,6 +1,6 @@
-from typing import Union, Optional, List, TYPE_CHECKING
+from typing import Union, Optional, List, Any, TYPE_CHECKING
 from apscheduler.triggers.date import DateTrigger
-from app import scheduler, dp
+from app import scheduler, dp, cache_service
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -23,8 +23,9 @@ async def _schedule_message_job(
                         'ReplyKeyboardMarkup',
                         'ReplyKeyboardRemove',
                         'ForceReply', None] = None,
+    context: Optional[Any] = None,
 ):
-    await dp.bot.send_message(
+    sent_message = await dp.bot.send_message(
         chat_id=chat_id,
         text=text,
         parse_mode=parse_mode,
@@ -35,6 +36,8 @@ async def _schedule_message_job(
         allow_sending_without_reply=allow_sending_without_reply,
         reply_markup=reply_markup,
     )
+    if context:
+        cache_service.set_context_for_message(sent_message, context)
 
 
 def schedule_message(
@@ -51,6 +54,7 @@ def schedule_message(
                         'ReplyKeyboardMarkup',
                         'ReplyKeyboardRemove',
                         'ForceReply', None] = None,
+    context: Optional[Any] = None,
 ) -> 'Job':
     return scheduler.add_job(
         func=_schedule_message_job,
@@ -62,7 +66,8 @@ def schedule_message(
             'disable_notification': disable_notification,
             'reply_to_message_id': reply_to_message_id,
             'allow_sending_without_reply': allow_sending_without_reply,
-            'reply_markup': reply_markup
+            'reply_markup': reply_markup,
+            'context': context,
         },
         trigger=DateTrigger(dt)
     )

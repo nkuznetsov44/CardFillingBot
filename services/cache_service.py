@@ -1,5 +1,6 @@
+import json
 import logging
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 import redis
 from aiogram.types import Message
 from settings import redis_host, redis_port, redis_db, redis_password
@@ -67,3 +68,18 @@ class CacheService:
         if not category_json:
             return None
         return CategoryDto.from_json(category_json)
+
+    def set_context_for_message(self, message: Message, context: Dict[str, Any]) -> None:
+        context_str = json.dumps(context)
+        self.rdb.set(f'{message.chat.id}_{message.message_id}_context', context_str)
+        self.logger.debug(
+            f'Save to cache context {context_str} for message for '
+            f'chat {message.chat.id}, message {message.message_id}'
+        )
+
+    def get_context_for_message(self, message: Message) -> Optional[Dict[str, Any]]:
+        context_str = self.rdb.get(f'{message.chat.id}_{message.message_id}_context')
+        self.logger.debug(
+            f'Get from cache context {context_str} for for chat {message.chat.id}, message {message.message_id}'
+        )
+        return json.loads(context_str)

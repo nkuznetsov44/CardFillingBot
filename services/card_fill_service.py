@@ -113,6 +113,16 @@ class CardFillService:
         finally:
             self.DbSession.remove()
 
+    def change_date_for_fill(self, fill: FillDto, dt: datetime) -> None:
+        db_session = self.DbSession()
+        try:
+            fill_obj = db_session.query(CardFill).get(fill.id)
+            fill_obj.fill_date = dt
+            db_session.commit()
+            self.logger.info(f'Changed date for fill {fill_obj}')
+        finally:
+            self.DbSession.remove()
+
     def list_categories(self) -> List[CategoryDto]:
         db_session = self.DbSession()
         try:

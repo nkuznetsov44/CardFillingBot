@@ -16,12 +16,14 @@ class NewCategoryMessageParser(IMessageParser[Tuple[CategoryDto, FillDto]]):
             return None
         if not message.reply_to_message.text:
             return None
-        if not message.reply_to_message.text.startswith('Создание категории для пополнения: '):
+        if not message.reply_to_message.text.startswith('Создание категории для записи: '):
             return None
         try:
             cat_name, cat_code, cat_proportion = message.text.split(',')
             cat_name = cat_name.strip()
-            cat_code = cat_code.strip()
+            if not cat_name.isupper():
+                cat_name = cat_name.lower()
+            cat_code = cat_code.strip().upper()
             cat_proportion = float(cat_proportion.strip())
             fill = self.cache_service.get_fill_for_message(message.reply_to_message)
             aliases = []
