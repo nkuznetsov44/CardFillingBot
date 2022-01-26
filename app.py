@@ -37,16 +37,13 @@ scheduler = AsyncIOScheduler({
 })
 
 
-async def send_scheduled_message(text: str, chat_id: int) -> None:
-    logger.info('Enter job')
-    await dp.bot.send_message(chat_id=chat_id, text=text)
-
-
 async def on_startup(_: Dispatcher) -> None:
     await bot.set_webhook(webhook_url)
     scheduler.start()
+    logger.info('Started scheduler')
     if scheduler_clear_jobs:
         scheduler.remove_all_jobs()
+        logger.info('Removed old scheduler jobs')
 
 
 async def on_shutdown(_: Dispatcher) -> None:

@@ -18,7 +18,9 @@ class CacheService:
             decode_responses=True,
             charset='utf-8'
         )
-        self.logger.info('Initialized redis connection for cache service')
+        self.logger.info(
+            f'Initialized redis connection for cache service at {redis_host}:{redis_port}/{redis_db}'
+        )
 
     def set_fill_for_message(self, message: Message, fill: FillDto) -> None:
         fill_json = fill.to_json()
