@@ -6,14 +6,15 @@ from aiogram.utils.executor import start_webhook
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from settings import (
     webhook_path, webhook_url, webapp_host, webapp_port,
-    telegram_token, database_uri, scheduler_clear_jobs
+    telegram_token, database_uri, scheduler_clear_jobs, log_level
 )
 from services.card_fill_service import CardFillService
 from services.cache_service import CacheService
 from services.graph_service import GraphService
 
 
-logging.basicConfig(level=logging.DEBUG)
+level = logging.getLevelName(log_level)
+logging.basicConfig(level=level)
 logger = logging.getLogger(__name__)
 
 bot = Bot(token=telegram_token)

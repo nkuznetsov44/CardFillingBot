@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cardfillingbot
+  annotations:
+      cert-manager.io/issuer: letsencrypt
+spec:
+  tls:
+  - hosts:
+    - cardfillingbot.nkuznetsov.com
+    secretName: cardfillingbot-tls-secret
+  rules:
+  - host: cardfillingbot.nkuznetsov.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cardfillingbot
+            port:
+              number: 80

@@ -29,7 +29,7 @@ class CacheService:
 
     def get_fill_for_message(self, message: Message) -> Optional[FillDto]:
         fill_json = self.rdb.get(f'{message.chat.id}_{message.message_id}_fill')
-        self.logger.info(
+        self.logger.debug(
             f'Get from cache fill {fill_json} for chat {message.chat.id}, message {message.message_id}'
         )
         if not fill_json:

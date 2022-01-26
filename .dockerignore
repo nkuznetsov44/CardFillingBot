@@ -3,3 +3,5 @@
 .docker-compose*
 mariadb/
 redis/
+kubernetes/
+venv/

@@ -1,7 +1,8 @@
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from datetime import datetime, timedelta
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
+from aiogram.utils.callback_data import CallbackData
 from dto import Month, FillDto, CategoryDto, UserDto
 from message_parsers import IParsedMessage
 from message_parsers.month_message_parser import MonthMessageParser
@@ -9,7 +10,7 @@ from message_parsers.fill_message_parser import FillMessageParser
 from message_parsers.new_category_message_parser import NewCategoryMessageParser
 from message_formatters import (
     month_names, format_user_fills, format_monthly_report, format_yearly_report,
-    get_current_month_name, format_fill_confirmed
+    format_fill_confirmed
 )
 from app import (
     dp, bot, card_fill_service, cache_service, graph_service, start_app
@@ -18,6 +19,11 @@ from services.schedule_service import schedule_message
 
 
 logger = logging.getLogger(__name__)
+
+
+change_category_cb = CallbackData('change_category', 'category_code')
+schedule_month_cb = CallbackData('schedule_month', 'month')
+schedule_day_cb = CallbackData('schedule_day', 'month', 'day')
 
 
 @dp.message_handler()
@@ -130,7 +136,9 @@ async def show_category(callback_query: CallbackQuery) -> None:
         buttons_group = []
         for cat in categories[i:i + buttons_per_row]:
             buttons_group.append(
-                InlineKeyboardButton(text=cat.name, callback_data=f'change_category{cat.code}')
+                InlineKeyboardButton(
+                    text=cat.name, callback_data=change_category_cb.new(category_code=cat.code)
+                )
             )
         keyboard_buttons.append(buttons_group)
     keyboard_buttons.append([InlineKeyboardButton(
@@ -150,9 +158,9 @@ async def show_category(callback_query: CallbackQuery) -> None:
     )
 
 
-@dp.callback_query_handler(lambda cq: cq.data.startswith('change_category'))
-async def change_category(callback_query: CallbackQuery) -> None:
-    category_code = callback_query.data.replace('change_category', '')
+@dp.callback_query_handler(change_category_cb.filter())
+async def change_category(callback_query: CallbackQuery, callback_data: Dict[str, str]) -> None:
+    category_code = callback_data['category_code']
     fill = cache_service.get_fill_for_message(callback_query.message)
     fill = card_fill_service.change_category_for_fill(fill.id, category_code)
 
@@ -168,12 +176,13 @@ async def change_category(callback_query: CallbackQuery) -> None:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[change_category_button], [delete_fill_button], [schedule_fill_button]]
     )
-    await bot.edit_message_text(
+    message = await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
         message_id=callback_query.message.message_id,
         text=reply_text,
         reply_markup=keyboard
     )
+    cache_service.set_fill_for_message(message, fill)  # caching updated fill
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'delete_fill')
@@ -219,12 +228,13 @@ async def confirm_new_category(callback_query: CallbackQuery) -> None:
     except:
         text = 'Ошибка создания категории.'
         logger.exception('Ошибка создания категории')
-    await bot.edit_message_text(
+    message = await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
         message_id=callback_query.message.message_id,
         text=text,
         reply_markup=None
     )
+    cache_service.set_fill_for_message(message, fill)  # caching updated fill
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'my')
@@ -343,32 +353,67 @@ async def per_year(callback_query: CallbackQuery) -> None:
 @dp.callback_query_handler(lambda cq: cq.data == 'schedule_fill')
 async def schedule_fill(callback_query: CallbackQuery) -> None:
     fill = cache_service.get_fill_for_message(callback_query.message)
-    text = f'Выберите планируемую дату для траты {fill.amount} р. ({fill.description}): {fill.category.name}.'
-    now = datetime.now()
-    eom = datetime(year=now.year, month=now.month + 1, day=1) - timedelta(days=1)
-    days = range(now.day, eom.day + 1)
+    text = f'Выберите планируемый месяц для траты {fill.amount} р. ({fill.description}): {fill.category.name}.'
+    months_to_schedule = 3
+    current_month_num = datetime.now().month
+    keyboard_buttons = []
+    for month_num in range(current_month_num, current_month_num + months_to_schedule):
+        keyboard_buttons.append([InlineKeyboardButton(
+            text=month_names[Month(month_num % 12)], callback_data=schedule_month_cb.new(month=month_num)
+        )])
+    keyboard_buttons.append([InlineKeyboardMarkup(text='ОТМЕНА', callback_data='delete_fill')])
+    await bot.edit_message_text(
+        chat_id=callback_query.message.chat.id,
+        message_id=callback_query.message.message_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+    )
+
+
+@dp.callback_query_handler(schedule_month_cb.filter())
+async def schedule_month(callback_query: CallbackQuery, callback_data: Dict[str, str]) -> None:
+    fill = cache_service.get_fill_for_message(callback_query.message)
+    month_number = int(callback_data['month'])
+    month_name = month_names[Month(month_number)]
+    text = (
+        f'Выберите планируемую дату в {month_name} для '
+        f'затраты {fill.amount} р. ({fill.description}): {fill.category.name}.'
+    )
+    if month_number == datetime.now().month:
+        start_date = datetime.now().day + 1
+    else:
+        start_date = 1
+    end_date = (datetime(year=datetime.now().year, month=month_number + 1, day=1) - timedelta(days=1)).day
+    days = range(start_date, end_date + 1)
     keyboard_buttons = []
     buttons_per_row = 6
     for i in range(0, len(days), buttons_per_row):
         buttons_group = []
         for day in days[i:i + buttons_per_row]:
-            buttons_group.append(InlineKeyboardButton(text=f'{day}', callback_data=f'schedule_day{day}'))
+            buttons_group.append(
+                InlineKeyboardButton(
+                    text=f'{day}',
+                    callback_data=schedule_day_cb.new(month=month_number, day=day)
+                )
+            )
         keyboard_buttons.append(buttons_group)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+    keyboard_buttons.append([InlineKeyboardMarkup(text='ОТМЕНА', callback_data='delete_fill')])
     await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
         message_id=callback_query.message.message_id,
         text=text,
-        reply_markup=keyboard
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
     )
 
 
-@dp.callback_query_handler(lambda cq: cq.data.startswith('schedule_day'))
-async def schedule_day(callback_query: CallbackQuery) -> None:
+@dp.callback_query_handler(schedule_day_cb.filter())
+async def schedule_day(callback_query: CallbackQuery, callback_data: Dict[str, str]) -> None:
     fill = cache_service.get_fill_for_message(callback_query.message)
-    day = int(callback_query.data.replace('schedule_day', ''))
+    month_number = int(callback_data['month'])
+    month_name = month_names[Month(month_number)]
+    day = int(callback_data['day'])
     scheduled_fill_date = datetime(
-        year=datetime.now().year, month=datetime.now().month, day=day,
+        year=datetime.now().year, month=month_number, day=day,
         hour=19, minute=0, second=0
     )
     card_fill_service.change_date_for_fill(fill, scheduled_fill_date)
@@ -377,7 +422,7 @@ async def schedule_day(callback_query: CallbackQuery) -> None:
         message_id=callback_query.message.message_id,
         text=(
             f'Трата {fill.amount} р. ({fill.description}): {fill.category.name} запланирована на '
-            f'{get_current_month_name()}, {day}. Она будет учитываться в статистике за текущий месяц. '
+            f'{month_name}, {day}. Она будет учитываться в статистике за {month_name}. '
             f'В день траты придет запрос для подтверждения.'
         ),
         reply_markup=None

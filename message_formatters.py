@@ -120,11 +120,6 @@ def format_yearly_report(data: SummaryOverPeriodDto, year: int, scope: FillScope
     return caption.replace('-', '\\-')
 
 
-def get_current_month_name() -> str:
-    current_month = Month(datetime.now().month)
-    return month_names[current_month]
-
-
 def format_fill_confirmed(
     fill: FillDto, budget: Optional[BudgetDto], current_category_usage: Optional[float]
 ) -> str:

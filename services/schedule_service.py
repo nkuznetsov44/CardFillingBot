@@ -1,4 +1,5 @@
 from typing import Union, Optional, List, Any, TYPE_CHECKING
+import logging
 from apscheduler.triggers.date import DateTrigger
 from app import scheduler, dp, cache_service
 
@@ -8,6 +9,9 @@ if TYPE_CHECKING:
     from aiogram.types import (
         MessageEntity, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply
     )
+
+
+logger = logging.getLogger(__name__)
 
 
 async def _schedule_message_job(
@@ -56,7 +60,7 @@ def schedule_message(
                         'ForceReply', None] = None,
     context: Optional[Any] = None,
 ) -> 'Job':
-    return scheduler.add_job(
+    job = scheduler.add_job(
         func=_schedule_message_job,
         args=(chat_id, text),
         kwargs={
@@ -71,3 +75,5 @@ def schedule_message(
         },
         trigger=DateTrigger(dt)
     )
+    logger.info(f'Scheduled message {text} at {dt} with context {context}')
+    return job
