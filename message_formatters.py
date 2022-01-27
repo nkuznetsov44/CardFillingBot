@@ -23,6 +23,33 @@ month_names = {
 }
 
 
+def format_fills_list_as_table(fills: List[FillDto], scope: FillScopeDto) -> str:
+    if scope.scope_type == 'PRIVATE':
+        max_desc_width = 17
+    else:
+        max_desc_width = 13
+    tbl = prettytable.PrettyTable()
+    cat_emoji_field_name = emojize(':card_index_dividers:')
+    tbl._max_width = {'Дата': 5, "Сумма": 5, cat_emoji_field_name: 1, 'Описание': max_desc_width}
+    tbl.border = False
+    tbl.hrules = prettytable.HEADER
+    tbl.left_padding_width = 0
+    tbl.right_padding_width = 1
+    tbl.field_names = ['Дата', 'Сумма', cat_emoji_field_name, 'Описание']
+    tbl.align['Дата'] = 'r'
+    tbl.align['Сумма'] = 'r'
+    tbl.align['Описание'] = 'l'
+    tbl.align['C'] = 'l'
+    for fill in fills:
+        tbl.add_row([
+            fill.fill_date.strftime('%d/%m'),
+            f'{fill.amount:.0f}',
+            fill.category.get_emoji(),
+            fill.description,
+        ])
+    return tbl.get_string()
+
+
 def format_user_fills(
     fills: List[FillDto],
     from_user: UserDto,
@@ -34,35 +61,10 @@ def format_user_fills(
     if len(fills) == 0:
         text = f'Не было трат в {m_names} {year}.'
     else:
-        if scope.scope_type == 'PRIVATE':
-            description_max_len = 18
-        else:
-            description_max_len = 14
-
-        def format_description(desc: str) -> str:
-            if len(desc) <= description_max_len:
-                return desc
-            return desc[0:description_max_len - 2] + '..'
-
-        tbl = prettytable.PrettyTable()
-        tbl.border = False
-        tbl.left_padding_width = 0
-        tbl.right_padding_width = 1
-        tbl.field_names = ['Дата', 'Сумм', emojize(':card_index_dividers:'), 'Описание']
-        tbl.align['Дата'] = 'r'
-        tbl.align['Сумм'] = 'r'
-        tbl.align['Описание'] = 'l'
-        tbl.align['C'] = 'l'
-        for fill in fills:
-            tbl.add_row([
-                fill.fill_date.strftime('%d/%m'),
-                f'{fill.amount:.0f}',
-                fill.category.get_emoji(),
-                format_description(fill.description),
-            ])
+        fills_table = format_fills_list_as_table(fills, scope)
         text = (
             f'Траты @{from_user.username} за {m_names} {year}:\n' +
-            '```' + tbl.get_string() + '```'
+            '```' + fills_table + '```'
         )
     text = text.replace('-', '\\-').replace('_', '\\_').replace('.', '\\.')
     return text
