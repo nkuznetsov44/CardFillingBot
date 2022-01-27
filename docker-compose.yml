@@ -15,6 +15,7 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=CardFillingBot
+      - TZ=${TZ}
   redis:
     build:
       dockerfile: Dockerfile-redis
@@ -51,3 +52,4 @@ services:
       - SCHEDULER_CLEAR_JOBS=${SCHEDULER_CLEAR_JOBS}
       - MINOR_PROPORTION_USER_ID=${MINOR_PROPORTION_USER_ID}
       - MAJOR_PROPORTION_USER_ID=${MAJOR_PROPORTION_USER_ID}
+      - TZ=${TZ}

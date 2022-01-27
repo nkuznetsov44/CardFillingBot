@@ -30,3 +30,5 @@ webapp_host = os.getenv('WEBAPP_HOST', '0.0.0.0')
 webapp_port = int(os.getenv('WEBAPP_PORT', '8000'))
 
 log_level = os.getenv('LOG_LEVEL', 'INFO')
+
+tz = os.getenv('TZ')

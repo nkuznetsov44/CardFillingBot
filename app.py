@@ -6,7 +6,7 @@ from aiogram.utils.executor import start_webhook
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from settings import (
     webhook_path, webhook_url, webapp_host, webapp_port,
-    telegram_token, database_uri, scheduler_clear_jobs, log_level
+    telegram_token, database_uri, scheduler_clear_jobs, log_level, tz
 )
 from services.card_fill_service import CardFillService
 from services.cache_service import CacheService
@@ -33,7 +33,7 @@ scheduler = AsyncIOScheduler({
     'apscheduler.executors.default': {
         'class': 'apscheduler.executors.asyncio:AsyncIOExecutor',
     },
-    'apscheduler.timezone': 'Europe/Moscow',
+    'apscheduler.timezone': tz,
 })
 
 

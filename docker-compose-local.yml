@@ -15,6 +15,7 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=CardFillingBot
+      - TZ=${TZ}
     ports:
       - 3306:3306
   redis:
