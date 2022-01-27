@@ -45,6 +45,7 @@ class CategoryDto:
     name: str
     aliases: List[str]
     proportion: float
+    emoji_name: str
 
     @staticmethod
     def from_model(category: Category) -> 'CategoryDto':
@@ -52,7 +53,8 @@ class CategoryDto:
             code=category.code,
             name=category.name,
             aliases=category.get_aliases(),
-            proportion=category.proportion
+            proportion=category.proportion,
+            emoji_name=category.emoji_name
         )
 
 

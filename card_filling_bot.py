@@ -1,6 +1,8 @@
 import logging
 from typing import List, Tuple, Dict
 from datetime import datetime, timedelta
+
+import emoji
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils.callback_data import CallbackData
 from dto import Month, FillDto, CategoryDto, UserDto
@@ -56,6 +58,7 @@ async def handle_new_category_parsed_message(parsed_message: IParsedMessage[Tupl
     text = (
         'Создаём новую категорию:\n'
         f'  - название: {category.name}\n  - код: {category.code}\n'
+        f'  - иконка: {emoji.emojize(category.emoji_name)}\n'
         f'  - пропорция: {category.proportion:.2f}.\n\n'
         'Все верно?'
     )
@@ -206,7 +209,7 @@ async def create_new_category(callback_query: CallbackQuery) -> None:
         text=(
             f'Создание категории для записи: {fill.amount} р. ({fill.description}).\n'
             'Ответом на это сообщение пришлите название, код и пропорцию для новой категории через запятую, '
-            'например "Еда, FOOD, 0.8".'
+            f'например "Еда, FOOD, 0.8, {emoji.emojize(":carrot:")}".'
         ),
         reply_markup=None
     )
@@ -245,7 +248,7 @@ async def my_fills_current_year(callback_query: CallbackQuery) -> None:
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     fills = card_fill_service.get_user_fills_in_months(from_user, months, year, scope)
 
-    message_text = format_user_fills(fills, from_user, months, year)
+    message_text = format_user_fills(fills, from_user, months, year, scope)
     previous_year = InlineKeyboardButton(
         text='Предыдущий год', callback_data='fills_previous_year'
     )
@@ -254,7 +257,8 @@ async def my_fills_current_year(callback_query: CallbackQuery) -> None:
         chat_id=callback_query.message.chat.id,
         message_id=callback_query.message.message_id,
         text=message_text,
-        reply_markup=keyboard
+        reply_markup=keyboard,
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
 
@@ -269,7 +273,8 @@ async def my_fills_previous_year(callback_query: CallbackQuery) -> None:
     await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
         message_id=callback_query.message.message_id,
-        text=message_text
+        text=message_text,
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
 

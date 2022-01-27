@@ -137,7 +137,8 @@ class CardFillService:
                 code=category.code,
                 name=category.name,
                 aliases='',
-                proportion=Decimal(f'{category.proportion:.2f}')
+                proportion=Decimal(f'{category.proportion:.2f}'),
+                emoji_name=category.emoji_name
             )
             db_session.add(category_obj)
             db_session.commit()

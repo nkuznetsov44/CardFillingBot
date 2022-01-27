@@ -58,4 +58,5 @@ def start_app() -> None:
         on_shutdown=on_shutdown,
         host=webapp_host,
         port=webapp_port,
+        skip_updates=True
     )

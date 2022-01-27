@@ -57,6 +57,7 @@ class Category(Base):
     name = Column('name', String)
     aliases = Column('aliases', String)
     proportion = Column('proportion', Numeric)
+    emoji_name = Column('emoji_name', String)
     card_fills = relationship('CardFill')
 
     def get_aliases(self) -> List[str]:

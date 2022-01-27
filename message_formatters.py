@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
-from datetime import datetime
+import prettytable
+import emoji
 from dto import (
     Month, FillDto, UserDto, FillScopeDto, UserSumOverPeriodDto, CategorySumOverPeriodDto,
     ProportionOverPeriodDto, SummaryOverPeriodDto, BudgetDto
@@ -22,23 +23,48 @@ month_names = {
 }
 
 
-def format_user_fills(fills: List[FillDto], from_user: UserDto, months: List[Month], year: int) -> str:
-    """Example message:
-        Пополения @username за Январь, Февраль 2021:
-        2022-01-09 09:06:09: 50.0 мобильная связь регулярные
-        2022-02-02 11:23:15: 120.0 бар рестораны
-
-    """
+def format_user_fills(
+    fills: List[FillDto],
+    from_user: UserDto,
+    months: List[Month],
+    year: int,
+    scope: FillScopeDto
+) -> str:
     m_names = ', '.join(map(month_names.get, months))
     if len(fills) == 0:
         text = f'Не было трат в {m_names} {year}.'
     else:
+        if scope.scope_type == 'PRIVATE':
+            description_max_len = 18
+        else:
+            description_max_len = 14
+
+        def format_description(desc: str) -> str:
+            if len(desc) <= description_max_len:
+                return desc
+            return desc[0:description_max_len - 2] + '..'
+
+        tbl = prettytable.PrettyTable()
+        tbl.border = False
+        tbl.left_padding_width = 0
+        tbl.right_padding_width = 1
+        tbl.field_names = ['Дата', 'Сумм', emoji.emojize(':card_index_dividers:'), 'Описание']
+        tbl.align['Дата'] = 'r'
+        tbl.align['Сумм'] = 'r'
+        tbl.align['Описание'] = 'l'
+        tbl.align['C'] = 'l'
+        for fill in fills:
+            tbl.add_row([
+                fill.fill_date.strftime('%d/%m'),
+                f'{fill.amount:.0f}',
+                emoji.emojize(fill.category.emoji_name),
+                format_description(fill.description),
+            ])
         text = (
             f'Траты @{from_user.username} за {m_names} {year}:\n' +
-            '\n'.join(
-                [f'{fill.fill_date}: {fill.amount} {fill.description} {fill.category.name}' for fill in fills]
-            )
+            '```' + tbl.get_string() + '```'
         )
+    text = text.replace('-', '\\-').replace('_', '\\_').replace('.', '\\.')
     return text
 
 
@@ -69,19 +95,6 @@ def format_proportions_block(data: ProportionOverPeriodDto) -> str:
 
 
 def format_monthly_report(data: Dict[Month, SummaryOverPeriodDto], year: int, scope: FillScopeDto) -> str:
-    """Example message:
-        Январь 2022:
-        @username1: 12300
-        @username2: 16120
-
-        Категории:
-          - для дома: 5726
-          - рестораны: 3000
-
-        Пропорции:
-          - текущая: 0.86
-          - ожидаемая: 0.88
-    """
     message_text = ''
     for month, data_month in data.items():
         message_text += f'*{month_names[month]} {year}:*\n'
@@ -99,19 +112,6 @@ def format_monthly_report(data: Dict[Month, SummaryOverPeriodDto], year: int, sc
 
 
 def format_yearly_report(data: SummaryOverPeriodDto, year: int, scope: FillScopeDto) -> str:
-    """Example message:
-        За 2022 год:
-        @username1: 12300
-        @username2: 16120
-
-        Категории:
-          - для дома: 5726
-          - рестораны: 3000
-
-        Пропорции:
-          - текущая: 0.86
-          - ожидаемая: 0.88
-    """
     caption = f'*За {year} год:*\n'
     caption += format_by_user_block(data.by_user, scope) + '\n\n'
     caption += format_by_category_block(data.by_category, display_limits=False)
