@@ -419,33 +419,39 @@ async def schedule_day(callback_query: CallbackQuery, callback_data: Dict[str, s
     day = int(callback_data['day'])
     scheduled_fill_date = datetime(
         year=datetime.now().year, month=month_number, day=day,
-        hour=19, minute=0, second=0
+        hour=19, minute=0, second=0, tzinfo=fill.fill_date.tzinfo
     )
-    card_fill_service.change_date_for_fill(fill, scheduled_fill_date)
-    await bot.edit_message_text(
-        chat_id=callback_query.message.chat.id,
-        message_id=callback_query.message.message_id,
-        text=(
-            f'Трата {fill.amount} р. ({fill.description}): {fill.category.name} запланирована на '
-            f'{month_name}, {day}. Она будет учитываться в статистике за {month_name}. '
-            f'В день траты придет запрос для подтверждения.'
-        ),
-        reply_markup=None
-    )
-    schedule_message(
-        chat_id=int(callback_query.message.chat.id),
-        text=f'Оповещение о запланированной трате {fill.amount} р. ({fill.description}). Она состоялась?',
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[[
-                InlineKeyboardButton(text='Да', callback_data='scheduled_fill_callback_yes'),
-                InlineKeyboardMarkup(text='Нет', callback_data='scheduled_fill_callback_no')
-            ]]
-        ),
-        dt=scheduled_fill_date,
-        context={
-            'fill_id': fill.id
-        }
-    )
+    text = None
+    try:
+        card_fill_service.change_date_for_fill(fill, scheduled_fill_date)
+        schedule_message(
+            chat_id=int(callback_query.message.chat.id),
+            text=f'Оповещение о запланированной трате {fill.amount} р. ({fill.description}). Она состоялась?',
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[
+                    InlineKeyboardButton(text='Да', callback_data='scheduled_fill_callback_yes'),
+                    InlineKeyboardMarkup(text='Нет', callback_data='scheduled_fill_callback_no')
+                ]]
+            ),
+            dt=scheduled_fill_date,
+            context={
+                'fill_id': fill.id
+            }
+        )
+        text = (
+           f'Трата {fill.amount} р. ({fill.description}): {fill.category.name} запланирована на '
+           f'{month_name}, {day}. Она будет учитываться в статистике за {month_name}. '
+           f'В день траты придет запрос для подтверждения.'
+        )
+    except:
+        text = 'Ошибка добавления запланированной траты.'
+    finally:
+        await bot.edit_message_text(
+            chat_id=callback_query.message.chat.id,
+            message_id=callback_query.message.message_id,
+            text=text,
+            reply_markup=None
+        )
 
 
 @dp.callback_query_handler(lambda cq: cq.data == 'scheduled_fill_callback_yes')
