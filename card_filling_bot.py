@@ -1,8 +1,7 @@
 import logging
 from typing import List, Tuple, Dict
 from datetime import datetime, timedelta
-
-import emoji
+from emoji import emojize
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils.callback_data import CallbackData
 from dto import Month, FillDto, CategoryDto, UserDto
@@ -58,7 +57,7 @@ async def handle_new_category_parsed_message(parsed_message: IParsedMessage[Tupl
     text = (
         'Создаём новую категорию:\n'
         f'  - название: {category.name}\n  - код: {category.code}\n'
-        f'  - иконка: {emoji.emojize(category.emoji_name)}\n'
+        f'  - иконка: {category.get_emoji()}\n'
         f'  - пропорция: {category.proportion:.2f}.\n\n'
         'Все верно?'
     )
@@ -140,7 +139,8 @@ async def show_category(callback_query: CallbackQuery) -> None:
         for cat in categories[i:i + buttons_per_row]:
             buttons_group.append(
                 InlineKeyboardButton(
-                    text=cat.name, callback_data=change_category_cb.new(category_code=cat.code)
+                    text=f'{cat.get_emoji()} {cat.name}',
+                    callback_data=change_category_cb.new(category_code=cat.code)
                 )
             )
         keyboard_buttons.append(buttons_group)
@@ -209,7 +209,7 @@ async def create_new_category(callback_query: CallbackQuery) -> None:
         text=(
             f'Создание категории для записи: {fill.amount} р. ({fill.description}).\n'
             'Ответом на это сообщение пришлите название, код и пропорцию для новой категории через запятую, '
-            f'например "Еда, FOOD, 0.8, {emoji.emojize(":carrot:")}".'
+            f'например "Еда, FOOD, 0.8, {emojize(":carrot:")}".'
         ),
         reply_markup=None
     )
@@ -227,7 +227,7 @@ async def confirm_new_category(callback_query: CallbackQuery) -> None:
             fill.category, fill.scope
         )
         text = format_fill_confirmed(fill, budget, current_category_usage)
-        text += f'\nСоздана новая категория "{category.name}".'
+        text += f'\nСоздана новая категория {category.get_emoji()} {category.name}.'
     except:
         text = 'Ошибка создания категории.'
         logger.exception('Ошибка создания категории')
@@ -269,7 +269,7 @@ async def my_fills_previous_year(callback_query: CallbackQuery) -> None:
     from_user = UserDto.from_telegramapi(callback_query.from_user)
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     fills = card_fill_service.get_user_fills_in_months(from_user, months, previous_year, scope)
-    message_text = format_user_fills(fills, from_user, months, previous_year)
+    message_text = format_user_fills(fills, from_user, months, previous_year, scope)
     await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,
         message_id=callback_query.message.message_id,

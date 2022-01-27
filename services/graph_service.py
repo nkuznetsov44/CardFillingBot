@@ -11,7 +11,7 @@ class GraphService:
     def create_by_category_diagram(self, data: List[CategorySumOverPeriodDto], name: str) -> Optional[bytes]:
         if not data:
             return None
-        labels = [by_category.category_name for by_category in data]
+        labels = [by_category.category.name for by_category in data]
         data = [by_category.amount for by_category in data]
 
         fig = plt.figure()

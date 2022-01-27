@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from datetime import datetime
 from enum import Enum
+from emoji import emojize
 from aiogram.types import User as TelegramapiUser
 from model import CardFill, FillScope, TelegramUser, Category, Budget
 
@@ -53,9 +54,12 @@ class CategoryDto:
             code=category.code,
             name=category.name,
             aliases=category.get_aliases(),
-            proportion=category.proportion,
+            proportion=float(category.proportion),
             emoji_name=category.emoji_name
         )
+
+    def get_emoji(self) -> str:
+        return emojize(self.emoji_name)
 
 
 @dataclass_json
@@ -135,15 +139,14 @@ class BudgetDto:
 
 @dataclass
 class UserSumOverPeriodDto:
-    username: str
+    user: UserDto
     amount: float
 
 
 @dataclass
 class CategorySumOverPeriodDto:
-    category_name: str
+    category: CategoryDto
     amount: float
-    proportion: float
     monthly_limit: Optional[float]
 
 

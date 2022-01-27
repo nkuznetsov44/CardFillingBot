@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional
 import prettytable
-import emoji
+from emoji import emojize
 from dto import (
     Month, FillDto, UserDto, FillScopeDto, UserSumOverPeriodDto, CategorySumOverPeriodDto,
     ProportionOverPeriodDto, SummaryOverPeriodDto, BudgetDto
@@ -48,7 +48,7 @@ def format_user_fills(
         tbl.border = False
         tbl.left_padding_width = 0
         tbl.right_padding_width = 1
-        tbl.field_names = ['Дата', 'Сумм', emoji.emojize(':card_index_dividers:'), 'Описание']
+        tbl.field_names = ['Дата', 'Сумм', emojize(':card_index_dividers:'), 'Описание']
         tbl.align['Дата'] = 'r'
         tbl.align['Сумм'] = 'r'
         tbl.align['Описание'] = 'l'
@@ -57,7 +57,7 @@ def format_user_fills(
             tbl.add_row([
                 fill.fill_date.strftime('%d/%m'),
                 f'{fill.amount:.0f}',
-                emoji.emojize(fill.category.emoji_name),
+                fill.category.get_emoji(),
                 format_description(fill.description),
             ])
         text = (
@@ -72,7 +72,7 @@ def format_by_user_block(data: List[UserSumOverPeriodDto], scope: FillScopeDto) 
     if scope.scope_type == 'PRIVATE':
         return '\n'.join([f'{user_sum.amount:.0f}' for user_sum in data])
     return (
-        '\n'.join([f'@{user_sum.username}: {user_sum.amount:.0f}' for user_sum in data])
+        '\n'.join([f'@{user_sum.user.username}: {user_sum.amount:.0f}' for user_sum in data])
         .replace('_', '\\_')
     )
 
@@ -80,7 +80,7 @@ def format_by_user_block(data: List[UserSumOverPeriodDto], scope: FillScopeDto) 
 def format_by_category_block(data: List[CategorySumOverPeriodDto], display_limits: bool) -> str:
     rows = []
     for category_sum in data:
-        text = f'  - {category_sum.category_name}: {category_sum.amount:.0f}'
+        text = f'  - {category_sum.category.get_emoji()} {category_sum.category.name}: {category_sum.amount:.0f}'
         if display_limits and category_sum.monthly_limit:
             text += f' (из {category_sum.monthly_limit:.0f})'
         rows.append(text)
@@ -126,7 +126,7 @@ def format_fill_confirmed(
     reply_text = f'Принято {fill.amount}р. от @{fill.user.username}'
     if fill.description:
         reply_text += f': {fill.description}'
-    reply_text += f', категория: {fill.category.name}.'
+    reply_text += f', категория: {fill.category.get_emoji()} {fill.category.name}.'
     if budget:
         reply_text += (
             f'\nИспользовано {current_category_usage.amount:.0f} из {current_category_usage.monthly_limit:.0f}.'

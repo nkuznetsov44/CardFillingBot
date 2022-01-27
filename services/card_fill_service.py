@@ -170,7 +170,7 @@ class CardFillService:
         try:
             data: Dict[Month, List[CategorySumOverPeriodDto]] = {}
             query = (
-                'select month_num, category_name, amount, proportion, monthly_limit '
+                'select month_num, category_code, amount, monthly_limit '
                 'from monthly_report_by_category '
                 f'where month_num in ({",".join([str(m.value) for m in months])}) '
                 f'and fill_year = {year} '
@@ -181,9 +181,12 @@ class CardFillService:
                 rows_for_month = list(filter(lambda row: row[0] == month.value, rows))
                 data_for_month: List[CategorySumOverPeriodDto] = []
                 if rows_for_month:
-                    for _, category_name, amount, proportion, monthly_limit in rows_for_month:
+                    for _, category_code, amount, monthly_limit in rows_for_month:
+                        category = db_session.query(Category).get(category_code)
                         data_for_month.append(
-                            CategorySumOverPeriodDto(category_name, amount, float(proportion), monthly_limit)
+                            CategorySumOverPeriodDto(
+                                CategoryDto.from_model(category), amount, monthly_limit
+                            )
                         )
                 data[month] = data_for_month
             return data
@@ -197,7 +200,7 @@ class CardFillService:
         try:
             data: Dict[Month, List[UserSumOverPeriodDto]] = {}
             query = (
-                'select month_num, username, amount '
+                'select month_num, user_id, amount '
                 'from monthly_report_by_user '
                 f'where month_num in ({",".join([str(m.value) for m in months])}) '
                 f'and fill_year = {year} '
@@ -208,8 +211,9 @@ class CardFillService:
                 rows_for_month = list(filter(lambda row: row[0] == month.value, rows))
                 data_for_month: List[UserSumOverPeriodDto] = []
                 if rows_for_month:
-                    for _, username, amount in rows_for_month:
-                        data_for_month.append(UserSumOverPeriodDto(username, amount))
+                    for _, user_id, amount in rows_for_month:
+                        user = db_session.query(TelegramUser).get(user_id)
+                        data_for_month.append(UserSumOverPeriodDto(UserDto.from_model(user), amount))
                 data[month] = data_for_month
             return data
         finally:
@@ -217,7 +221,7 @@ class CardFillService:
 
     @staticmethod
     def _get_user_data(data: List[UserSumOverPeriodDto], username: str) -> Optional[UserSumOverPeriodDto]:
-        return next(filter(lambda user_data: user_data.username == username, data), None)
+        return next(filter(lambda user_data: user_data.user.username == username, data), None)
 
     def get_monthly_report(
         self, months: List[Month], year: int, scope: FillScopeDto
@@ -260,7 +264,7 @@ class CardFillService:
         weighted_amount = 0.0
         total_amount = 0.0
         for category_data in data_by_category:
-            weighted_amount += category_data.amount * proportion_to_fraction(category_data.proportion)
+            weighted_amount += category_data.amount * proportion_to_fraction(category_data.category.proportion)
             total_amount += category_data.amount
         if total_amount == 0.0:
             return float('nan')
@@ -290,7 +294,7 @@ class CardFillService:
         db_session = self.DbSession()
         try:
             by_user_query = (
-                'select u.username, sum(cf.amount) as amount '
+                'select u.user_id, sum(cf.amount) as amount '
                 'from card_fill cf '
                 'join telegram_user u on cf.user_id = u.user_id '
                 f'where year(cf.fill_date) = {year} and cf.fill_scope = {scope.scope_id} '
@@ -298,11 +302,12 @@ class CardFillService:
             )
             by_user_rows = db_session.execute(by_user_query).fetchall()
             by_user: List[UserSumOverPeriodDto] = []
-            for row in by_user_rows:
-                by_user.append(UserSumOverPeriodDto(*row))
+            for user_id, amount in by_user_rows:
+                user = db_session.query(TelegramUser).get(user_id)
+                by_user.append(UserSumOverPeriodDto(UserDto.from_model(user), amount))
 
             by_category_query = (
-                'select cat.name as category_name, sum(cf.amount) as amount, cat.proportion '
+                'select cat.code as category_code, sum(cf.amount) as amount '
                 'from card_fill cf '
                 'join category cat on cf.category_code = cat.code '
                 f'where year(cf.fill_date) = {year} and cf.fill_scope = {scope.scope_id} '
@@ -310,9 +315,11 @@ class CardFillService:
             )
             by_category_rows = db_session.execute(by_category_query).fetchall()
             by_category: List[CategorySumOverPeriodDto] = []
-            for row in by_category_rows:
-                category_name, amount, proportion = row
-                by_category.append(CategorySumOverPeriodDto(category_name, amount, float(proportion), None))
+            for category_code, amount in by_category_rows:
+                category = db_session.query(Category).get(category_code)
+                by_category.append(
+                    CategorySumOverPeriodDto(CategoryDto.from_model(category), amount, None)
+                )
 
             minor_user_data = self._get_user_data(by_user, self.minor_proportion_user.username)
             major_user_data = self._get_user_data(by_user, self.major_proportion_user.username)
@@ -357,7 +364,7 @@ class CardFillService:
         )[current_month]
         return next(
             filter(
-                lambda cat_data: cat_data.category_name == category.name,
+                lambda cat_data: cat_data.category.code == category.code,
                 current_month_usage_by_category
             ), None
         )
