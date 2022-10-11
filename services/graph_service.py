@@ -2,8 +2,7 @@ from typing import List, Optional
 from io import BytesIO
 import matplotlib
 from matplotlib import pyplot as plt
-from CardFillingBot.dto import UserSumOverPeriodDto, UserSumOverPeriodWithBalanceDto
-from dto import CategorySumOverPeriodDto
+from dto import CategorySumOverPeriodDto, UserSumOverPeriodWithBalanceDto
 
 matplotlib.use('Agg')
 
