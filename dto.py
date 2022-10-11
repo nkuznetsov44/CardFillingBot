@@ -5,7 +5,9 @@ from datetime import datetime
 from enum import Enum
 from emoji import emojize
 from aiogram.types import User as TelegramapiUser
-from model import CardFill, FillScope, TelegramUser, Category, Budget
+from model import (
+    CardFill, FillScope, TelegramUser, Category, Budget, PurchaseListItem
+)
 
 
 class Month(Enum):
@@ -168,3 +170,20 @@ class SummaryOverPeriodDto:
     by_user: List[UserSumOverPeriodDto]
     by_category: List[CategorySumOverPeriodDto]
     proportions: ProportionOverPeriodDto
+
+
+@dataclass
+class PurchaseListItemDto:
+    id: int
+    scope: FillScopeDto
+    name: str
+    is_active: Optional[bool] = None
+
+    @staticmethod
+    def from_model(purchase: PurchaseListItem) -> 'PurchaseListItemDto':
+        return PurchaseListItemDto(
+            id=purchase.id,
+            scope=purchase.scope,
+            name=purchase.name,
+            is_active=purchase.is_active
+        )
