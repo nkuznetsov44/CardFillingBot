@@ -9,7 +9,7 @@ from model import CardFill, Category, TelegramUser, FillScope, Budget
 from dto import (
     Month, FillDto, CategoryDto, UserDto, UserSumOverPeriodDto,
     CategorySumOverPeriodDto, ProportionOverPeriodDto, SummaryOverPeriodDto,
-    FillScopeDto, BudgetDto
+    FillScopeDto, BudgetDto, UserSumOverPeriodWithBalanceDto
 )
 
 
@@ -218,6 +218,26 @@ class CardFillService:
             return data
         finally:
             self.DbSession.remove()
+
+    def get_debt_monthly_report_by_user(
+        self, months: List[Month], year: int, scope: FillScopeDto
+    ) -> Dict[Month, List[UserSumOverPeriodWithBalanceDto]]:
+        by_user = self.get_monthly_report_by_user(months, year, scope)
+        res: Dict[Month, List[UserSumOverPeriodWithBalanceDto]] = {}
+        for month, month_users in by_user.items():
+            month_total = sum([month_user.amount for month_user in month_users])
+            num_users = len(month_users)
+            month_user_balances = [
+                UserSumOverPeriodWithBalanceDto(
+                    user=month_user.user,
+                    amount=month_user.amount,
+                    balance=(month_user.amount - month_total / num_users),
+                )
+                for month_user in month_users
+            ]
+            res[month] = month_user_balances
+        return res
+
 
     @staticmethod
     def _get_user_data(data: List[UserSumOverPeriodDto], username: str) -> Optional[UserSumOverPeriodDto]:

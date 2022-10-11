@@ -2,6 +2,7 @@ import logging
 from typing import List, Tuple, Dict
 from datetime import datetime, timedelta
 from emoji import emojize
+from dto import FillScopeDto
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils.callback_data import CallbackData
 from dto import Month, FillDto, CategoryDto, UserDto
@@ -11,12 +12,13 @@ from message_parsers.fill_message_parser import FillMessageParser
 from message_parsers.new_category_message_parser import NewCategoryMessageParser
 from message_formatters import (
     month_names, format_user_fills, format_monthly_report, format_yearly_report,
-    format_fill_confirmed
+    format_fill_confirmed, format_monthly_report_group
 )
 from app import (
     dp, bot, card_fill_service, cache_service, graph_service, start_app
 )
 from services.schedule_service import schedule_message
+from settings import pay_silivri_scope_id
 
 
 logger = logging.getLogger(__name__)
@@ -280,9 +282,41 @@ async def my_fills_previous_year(callback_query: CallbackQuery) -> None:
 
 @dp.callback_query_handler(lambda cq: cq.data == 'stat')
 async def per_month_current_year(callback_query: CallbackQuery) -> None:
+    scope = card_fill_service.get_scope(callback_query.message.chat.id)
+    if scope.scope_id == pay_silivri_scope_id:
+        return await _per_month_current_year_group(callback_query, scope)
+    return await _per_month_current_year_default(callback_query, scope)
+
+
+async def _per_month_current_year_group(callback_query: CallbackQuery, scope: FillScopeDto) -> None:
     months = cache_service.get_months_for_message(callback_query.message)
     year = datetime.now().year
-    scope = card_fill_service.get_scope(callback_query.message.chat.id)
+    data = card_fill_service.get_debt_monthly_report_by_user(months, year, scope)
+
+    message_text = format_monthly_report_group(data, year, scope)
+    if len(months) == 1:
+        month = months[0]
+        diagram = graph_service.create_by_user_diagram(
+            data[month], name=f'{month_names[month]} {year}'
+        )
+        if diagram:
+            await bot.send_photo(
+                callback_query.message.chat.id,
+                photo=diagram,
+                caption=message_text,
+                parse_mode=ParseMode.MARKDOWN_V2
+            )
+        else:
+            await bot.send_message(
+                chat_id=callback_query.message.chat.id,
+                text=message_text,
+                parse_mode=ParseMode.MARKDOWN_V2
+            )
+
+
+async def _per_month_current_year_default(callback_query: CallbackQuery, scope: FillScopeDto) -> None:
+    months = cache_service.get_months_for_message(callback_query.message)
+    year = datetime.now().year
     data = card_fill_service.get_monthly_report(months, year, scope)
 
     message_text = format_monthly_report(data, year, scope)

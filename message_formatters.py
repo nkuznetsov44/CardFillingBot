@@ -3,7 +3,7 @@ import prettytable
 from emoji import emojize
 from dto import (
     Month, FillDto, UserDto, FillScopeDto, UserSumOverPeriodDto, CategorySumOverPeriodDto,
-    ProportionOverPeriodDto, SummaryOverPeriodDto, BudgetDto
+    ProportionOverPeriodDto, SummaryOverPeriodDto, BudgetDto, UserSumOverPeriodWithBalanceDto,
 )
 
 
@@ -79,6 +79,15 @@ def format_by_user_block(data: List[UserSumOverPeriodDto], scope: FillScopeDto) 
     )
 
 
+def format_by_user_balance_block(data: List[UserSumOverPeriodWithBalanceDto], scope: FillScopeDto) -> str:
+    if scope.scope_type == 'PRIVATE':
+        raise NotImplementedError
+    return (
+        '\n'.join([f'@{user_sum.user.username}: {user_sum.amount:.0f}\n    баланс: {user_sum.balance}' for user_sum in data])
+        .replace('_', '\\_')
+    )
+
+
 def format_by_category_block(data: List[CategorySumOverPeriodDto], display_limits: bool) -> str:
     rows = []
     for category_sum in data:
@@ -105,6 +114,21 @@ def format_monthly_report(data: Dict[Month, SummaryOverPeriodDto], year: int, sc
         if scope.scope_type == 'GROUP':
             message_text += '\n\n' + format_proportions_block(data_month.proportions)
         message_text += '\n\n'
+    return (
+        message_text
+        .replace('-', '\\-')
+        .replace('(', '\\(')
+        .replace(')', '\\)')
+    )
+
+
+def format_monthly_report_group(
+    data: Dict[Month, List[UserSumOverPeriodWithBalanceDto]], year: int, scope: FillScopeDto
+) -> str:
+    message_text = ''
+    for month, data_month in data.items():
+        message_text += f'*{month_names[month]} {year}:*\n'
+        message_text += format_by_user_balance_block(data_month, scope) + '\n\n'
     return (
         message_text
         .replace('-', '\\-')

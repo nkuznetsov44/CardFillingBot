@@ -144,6 +144,13 @@ class UserSumOverPeriodDto:
 
 
 @dataclass
+class UserSumOverPeriodWithBalanceDto:
+    user: UserDto
+    amount: float
+    balance: float
+
+
+@dataclass
 class CategorySumOverPeriodDto:
     category: CategoryDto
     amount: float
