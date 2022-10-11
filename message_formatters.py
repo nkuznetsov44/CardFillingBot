@@ -84,7 +84,7 @@ def format_by_user_balance_block(data: List[UserSumOverPeriodWithBalanceDto], sc
         raise NotImplementedError
     return (
         '\n'.join([f'@{user_sum.user.username}: {user_sum.amount:.0f}\n    баланс: {user_sum.balance:.0f}' for user_sum in data])
-        .replace('_', '\\_').replace('-', '\\-')
+        .replace('_', '\\_')
     )
 
 
