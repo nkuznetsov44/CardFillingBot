@@ -508,9 +508,9 @@ async def schedule_day(callback_query: CallbackQuery, callback_data: Dict[str, s
             }
         )
         text = (
-           f'Трата {fill.amount} р. ({fill.description}): {fill.category.name} запланирована на '
-           f'{month_name}, {day}. Она будет учитываться в статистике за {month_name}. '
-           f'В день траты придет запрос для подтверждения.'
+            f'Трата {fill.amount} р. ({fill.description}): {fill.category.name} запланирована на '
+            f'{month_name}, {day}. Она будет учитываться в статистике за {month_name}. '
+            f'В день траты придет запрос для подтверждения.'
         )
     except:
         text = 'Ошибка добавления запланированной траты.'
