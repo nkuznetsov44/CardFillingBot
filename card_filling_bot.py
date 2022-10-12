@@ -2,7 +2,7 @@ import logging
 from typing import List, Tuple, Dict
 from datetime import datetime, timedelta
 from emoji import emojize
-from dto import FillScopeDto
+from dto import FillScopeDto, PurchaseListItemDto
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils.callback_data import CallbackData
 from dto import Month, FillDto, CategoryDto, UserDto
@@ -10,12 +10,14 @@ from message_parsers import IParsedMessage
 from message_parsers.month_message_parser import MonthMessageParser
 from message_parsers.fill_message_parser import FillMessageParser
 from message_parsers.new_category_message_parser import NewCategoryMessageParser
+from message_parsers.purchase_message_parser import PurchaseMessageParser
+from message_parsers.purchase_list_parser import PurchaseListParser
 from message_formatters import (
     month_names, format_user_fills, format_monthly_report, format_yearly_report,
-    format_fill_confirmed, format_monthly_report_group
+    format_fill_confirmed, format_monthly_report_group, format_purchase_list
 )
 from app import (
-    dp, bot, card_fill_service, cache_service, graph_service, start_app
+    dp, bot, card_fill_service, cache_service, graph_service, purchase_service, start_app
 )
 from services.schedule_service import schedule_message
 from settings import pay_silivri_scope_id
@@ -51,6 +53,19 @@ async def basic_message_handler(message: Message) -> None:
             logger.info(f'Found months {months_message.data}')
             await handle_months_parsed_message(months_message)
             return
+
+        purchase_message = PurchaseMessageParser(card_fill_service).parse(message)
+        if purchase_message:
+            logger.info(f'Found purchase {purchase_message.data}')
+            await handle_purchase_message(purchase_message)
+            return
+
+        get_purchases_message = PurchaseListParser(card_fill_service).parse(message)
+        if purchase_message:
+            logger.info(f'Get purchases list {get_purchases_message.data}')
+            await handle_get_purchases_message(get_purchases_message)
+            return
+
     await handle_message_fallback(message)
 
 
@@ -117,6 +132,26 @@ async def handle_months_parsed_message(parsed_message: IParsedMessage[List[Month
         reply_markup=keyboard
     )
     cache_service.set_months_for_message(sent_message, months)
+
+
+async def handle_purchase_message(parsed_message: IParsedMessage[PurchaseListItemDto]) -> None:
+    purchase = parsed_message.data
+    purchase_service.add_purchase(purchase)
+
+    await bot.send_message(
+        chat_id=parsed_message.original_message.chat.id,
+        text=f'{purchase.name} успешно добавлен в список покупок'
+    )
+
+
+async def handle_get_purchases_message(parsed_message: IParsedMessage[FillScopeDto]) -> None:
+    scope = parsed_message.data
+    purchases = purchase_service.get_list(scope)
+
+    await bot.send_message(
+        chat_id=parsed_message.original_message.chat.id,
+        text=format_purchase_list(purchases)
+    )
 
 
 async def handle_message_fallback(message: Message) -> None:

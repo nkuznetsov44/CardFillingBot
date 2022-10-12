@@ -2,7 +2,7 @@ from typing import List, Dict, Optional
 import prettytable
 from emoji import emojize
 from dto import (
-    Month, FillDto, UserDto, FillScopeDto, UserSumOverPeriodDto, CategorySumOverPeriodDto,
+    Month, FillDto, PurchaseListItemDto, UserDto, FillScopeDto, UserSumOverPeriodDto, CategorySumOverPeriodDto,
     ProportionOverPeriodDto, SummaryOverPeriodDto, BudgetDto, UserSumOverPeriodWithBalanceDto,
 )
 
@@ -158,3 +158,12 @@ def format_fill_confirmed(
             f'\nИспользовано {current_category_usage.amount:.0f} из {current_category_usage.monthly_limit:.0f}.'
         )
     return reply_text
+
+
+def format_purchase_list(purchases: list[PurchaseListItemDto]) -> str:
+    message = 'Список покупок 🛍️:'
+
+    for purchase in purchases:
+        message += f'\n    • {purchase.name}'
+
+    return message

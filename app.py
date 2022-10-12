@@ -11,6 +11,7 @@ from settings import (
 from services.card_fill_service import CardFillService
 from services.cache_service import CacheService
 from services.graph_service import GraphService
+from services.purchase_list_service import PurchaseListService
 
 
 level = logging.getLevelName(log_level)
@@ -24,6 +25,7 @@ dp.middleware.setup(LoggingMiddleware())
 card_fill_service = CardFillService()
 cache_service = CacheService()
 graph_service = GraphService()
+purchase_service = PurchaseListService()
 
 scheduler = AsyncIOScheduler({
     'apscheduler.jobstores.default': {
