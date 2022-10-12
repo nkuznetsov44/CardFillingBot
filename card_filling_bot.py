@@ -61,7 +61,7 @@ async def basic_message_handler(message: Message) -> None:
             return
 
         get_purchases_message = PurchaseListParser(card_fill_service).parse(message)
-        if purchase_message:
+        if get_purchases_message:
             logger.info(f'Get purchases list {get_purchases_message.data}')
             await handle_get_purchases_message(get_purchases_message)
             return
