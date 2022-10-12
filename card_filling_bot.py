@@ -176,7 +176,7 @@ async def handle_get_purchases_message(parsed_message: IParsedMessage[FillScopeD
         text=format_purchase_list(purchases)
     )
 
-    cache_service.set_purchase_for_message(sent_message, purchases)
+    cache_service.set_purchases_for_message(sent_message, purchases)
 
 
 async def handle_message_fallback(message: Message) -> None:
