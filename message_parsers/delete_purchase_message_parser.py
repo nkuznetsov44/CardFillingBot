@@ -12,4 +12,7 @@ class DeletePurchaseMessageParser(IMessageParser[list[int]]):
         if not ('Список покупок' in message.reply_to_message.text):
             return None
 
-        return [int(i.strip()) for i in message.text.split(',')]
+        return IParsedMessage(
+            message, data=[int(i.strip()) for i in message.text.split(',')]
+        )
+

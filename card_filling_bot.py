@@ -43,9 +43,11 @@ async def basic_message_handler(message: Message) -> None:
             await handle_new_category_parsed_message(new_category_message)
             return
 
-        delete_purchase_message = DeletePurchaseMessageParser(cache_service, purchase_service).parse(message)
+        delete_purchase_message = DeletePurchaseMessageParser().parse(message)
         if delete_purchase_message:
             logger.info(f'Found delete purchase request {delete_purchase_message.data}')
+            await handle_delete_purchase_message(delete_purchase_message)
+            return
 
         fill_message = FillMessageParser(card_fill_service).parse(message)
         if fill_message:
@@ -76,10 +78,11 @@ async def basic_message_handler(message: Message) -> None:
 
 async def handle_delete_purchase_message(parsed_message: IParsedMessage[list[int]]):
     purchase_numbers = parsed_message.data
+    logger.debug(f'message: {parsed_message.original_message}, reply_to: {parsed_message.original_message.reply_to_message}')
     purchase_ids = cache_service.get_purchases_for_message(parsed_message.original_message.reply_to_message)
     for purchase_number in purchase_numbers:
         purchase_id = purchase_ids.get(purchase_number)
-        if not purchase_id:
+        if purchase_id is None:
             raise ValueError(f'Could not find purchase id for number {purchase_number}')
         purchase_service.delete_purchase(purchase_id)
     await bot.send_message(
@@ -168,12 +171,12 @@ async def handle_get_purchases_message(parsed_message: IParsedMessage[FillScopeD
     purchases = purchase_service.get_list(scope)
     logger.info(f'Returned from service: {purchases}')
 
-    cache_service.set_purchases_for_message(parsed_message.original_message, purchases)
-
-    await bot.send_message(
+    sent_message = await bot.send_message(
         chat_id=parsed_message.original_message.chat.id,
         text=format_purchase_list(purchases)
     )
+
+    cache_service.set_purchase_for_message(sent_message, purchases)
 
 
 async def handle_message_fallback(message: Message) -> None:

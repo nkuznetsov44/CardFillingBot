@@ -23,7 +23,7 @@ class CacheService:
         )
 
     def set_purchases_for_message(self, message: Message, purchases: list[PurchaseListItemDto]) -> None:
-        record = {i: purchase.id for i, purchase in enumerate(purchases)}
+        record = json.dumps({i: purchase.id for i, purchase in enumerate(purchases)})
         self.rdb.set(f'{message.chat.id}_{message.message_id}_purchase_list', record)
         self.logger.debug(
             f'Save purchase list {record} for chat {message.chat.id}, message {message.message_id}'
@@ -31,7 +31,8 @@ class CacheService:
 
     def get_purchases_for_message(self, message: Message) -> dict[int, int]:
         record = self.rdb.get(f'{message.chat.id}_{message.message_id}_purchase_list')
-        return json.loads(record)
+        self.logger.debug(f'Got purchases {record} for message {message.message_id}, chat {message.chat.id}')
+        return {int(key): value for key, value in json.loads(record)}
 
     def set_fill_for_message(self, message: Message, fill: FillDto) -> None:
         fill_json = fill.to_json()
