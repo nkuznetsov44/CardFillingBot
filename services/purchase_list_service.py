@@ -36,7 +36,7 @@ class PurchaseListService:
         try:
             items: list[PurchaseListItem] = (
                 db_session.query(PurchaseListItem)
-                .filter(PurchaseListItem.is_active is True)
+                .filter(PurchaseListItem.is_active.is_(True))
                 .filter(PurchaseListItem.fill_scope == scope.scope_id)
                 .all()
             )
