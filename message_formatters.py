@@ -161,9 +161,9 @@ def format_fill_confirmed(
 
 
 def format_purchase_list(purchases: list[PurchaseListItemDto]) -> str:
-    message = 'Список покупок 🛍️:'
+    message = '🛍️ Список покупок:'
 
-    for purchase in purchases:
-        message += f'\n    • {purchase.name}'
+    for i, purchase in enumerate(purchases):
+        message += f'\n  {i}. {purchase.name}'
 
     return message

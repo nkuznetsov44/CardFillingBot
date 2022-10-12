@@ -4,7 +4,7 @@ from typing import Optional, List, Any, Dict
 import redis
 from aiogram.types import Message
 from settings import redis_host, redis_port, redis_db, redis_password
-from dto import FillDto, CategoryDto, Month
+from dto import FillDto, CategoryDto, Month, PurchaseListItemDto
 
 
 class CacheService:
@@ -21,6 +21,17 @@ class CacheService:
         self.logger.info(
             f'Initialized redis connection for cache service at {redis_host}:{redis_port}/{redis_db}'
         )
+
+    def set_purchases_for_message(self, message: Message, purchases: list[PurchaseListItemDto]) -> None:
+        record = {i: purchase.id for i, purchase in enumerate(purchases)}
+        self.rdb.set(f'{message.chat.id}_{message.message_id}_purchase_list', record)
+        self.logger.debug(
+            f'Save purchase list {record} for chat {message.chat.id}, message {message.message_id}'
+        )
+
+    def get_purchases_for_message(self, message: Message) -> dict[int, int]:
+        record = self.rdb.get(f'{message.chat.id}_{message.message_id}_purchase_list')
+        return json.loads(record)
 
     def set_fill_for_message(self, message: Message, fill: FillDto) -> None:
         fill_json = fill.to_json()

@@ -12,6 +12,7 @@ from message_parsers.fill_message_parser import FillMessageParser
 from message_parsers.new_category_message_parser import NewCategoryMessageParser
 from message_parsers.purchase_message_parser import PurchaseMessageParser
 from message_parsers.purchase_list_parser import PurchaseListParser
+from message_parsers.delete_purchase_message_parser import DeletePurchaseMessageParser
 from message_formatters import (
     month_names, format_user_fills, format_monthly_report, format_yearly_report,
     format_fill_confirmed, format_monthly_report_group, format_purchase_list
@@ -42,6 +43,10 @@ async def basic_message_handler(message: Message) -> None:
             await handle_new_category_parsed_message(new_category_message)
             return
 
+        delete_purchase_message = DeletePurchaseMessageParser(cache_service, purchase_service).parse(message)
+        if delete_purchase_message:
+            logger.info(f'Found delete purchase request {delete_purchase_message.data}')
+
         fill_message = FillMessageParser(card_fill_service).parse(message)
         if fill_message:
             logger.info(f'Found fill {fill_message.data}')
@@ -67,6 +72,20 @@ async def basic_message_handler(message: Message) -> None:
             return
 
     await handle_message_fallback(message)
+
+
+async def handle_delete_purchase_message(parsed_message: IParsedMessage[list[int]]):
+    purchase_numbers = parsed_message.data
+    purchase_ids = cache_service.get_purchases_for_message(parsed_message.original_message.reply_to_message)
+    for purchase_number in purchase_numbers:
+        purchase_id = purchase_ids.get(purchase_number)
+        if not purchase_id:
+            raise ValueError(f'Could not find purchase id for number {purchase_number}')
+        purchase_service.delete_purchase(purchase_id)
+    await bot.send_message(
+        chat_id=parsed_message.original_message.chat.id,
+        text='Покупки удалены из списка'
+    )
 
 
 async def handle_new_category_parsed_message(parsed_message: IParsedMessage[Tuple[CategoryDto, FillDto]]) -> None:
@@ -140,15 +159,16 @@ async def handle_purchase_message(parsed_message: IParsedMessage[PurchaseListIte
 
     await bot.send_message(
         chat_id=parsed_message.original_message.chat.id,
-        text=f'{purchase.name} успешно добавлен в список покупок'
+        text=f'✔️ {purchase.name} успешно добавлен в список покупок'
     )
 
 
 async def handle_get_purchases_message(parsed_message: IParsedMessage[FillScopeDto]) -> None:
     scope = parsed_message.data
     purchases = purchase_service.get_list(scope)
-
     logger.info(f'Returned from service: {purchases}')
+
+    cache_service.set_purchases_for_message(parsed_message.original_message, purchases)
 
     await bot.send_message(
         chat_id=parsed_message.original_message.chat.id,

@@ -15,7 +15,6 @@ class PurchaseListService:
 
     def add_purchase(self, purchase: PurchaseListItemDto) -> None:
         db_session = self.DbSession()
-
         try:
             new_item = PurchaseListItem(
                 id=None,
@@ -23,16 +22,13 @@ class PurchaseListService:
                 name=purchase.name,
                 is_active=purchase.is_active
             )
-
             db_session.add(new_item)
             db_session.commit()
-
         finally:
             self.DbSession.remove()
 
     def get_list(self, scope: FillScopeDto) -> list[PurchaseListItemDto]:
         db_session = self.DbSession()
-
         try:
             items: list[PurchaseListItem] = (
                 db_session.query(PurchaseListItem)
@@ -40,15 +36,20 @@ class PurchaseListService:
                 .filter(PurchaseListItem.fill_scope == scope.scope_id)
                 .all()
             )
+            return [PurchaseListItemDto.from_model(item) for item in items]
+        finally:
+            self.DbSession.remove()
 
-            ret: list[PurchaseListItemDto] = []
-
-            for item in items:
-                ret.append(PurchaseListItemDto.from_model(item))
-
-            # ret = [PurchaseListItemDto.from_model(item) for item in items]
-
-            return ret
-
+    def delete_purchase(self, purchase_id: int) -> None:
+        db_session = self.DbSession()
+        try:
+            purchase = (
+                db_session.query(PurchaseListItem)
+                .filter(PurchaseListItem.id == purchase_id)
+                .one()
+            )
+            purchase.is_active = False
+            db_session.add(purchase)
+            db_session.commit()
         finally:
             self.DbSession.remove()

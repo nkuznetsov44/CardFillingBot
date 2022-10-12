@@ -12,7 +12,7 @@ class PurchaseListParser(IMessageParser[FillScopeDto]):
     def parse(self, message: Message) -> Optional[IParsedMessage[FillScopeDto]]:
         scope = self.card_fill_service.get_scope(message.chat.id)
 
-        if message.text.lower() == 'список':
+        if message.text.lower() in ('список', 'list'):
             return IParsedMessage(message, data=scope)
         else:
             return None
