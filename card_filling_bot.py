@@ -148,6 +148,8 @@ async def handle_get_purchases_message(parsed_message: IParsedMessage[FillScopeD
     scope = parsed_message.data
     purchases = purchase_service.get_list(scope)
 
+    logger.info(f'Returned from service: {purchases}')
+
     await bot.send_message(
         chat_id=parsed_message.original_message.chat.id,
         text=format_purchase_list(purchases)
