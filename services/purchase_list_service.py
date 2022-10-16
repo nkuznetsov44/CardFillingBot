@@ -10,7 +10,9 @@ class PurchaseListService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self._db_engine = create_engine(database_uri, pool_recycle=3600)
-        self.logger.info(f'Initialized db_engine for purchase list service at {database_uri}')
+        self.logger.info(
+            f"Initialized db_engine for purchase list service at {database_uri}"
+        )
         self.DbSession = scoped_session(sessionmaker(bind=self._db_engine))
 
     def add_purchase(self, purchase: PurchaseListItemDto) -> None:
@@ -20,7 +22,7 @@ class PurchaseListService:
                 id=None,
                 fill_scope=purchase.scope.scope_id,
                 name=purchase.name,
-                is_active=purchase.is_active
+                is_active=purchase.is_active,
             )
             db_session.add(new_item)
             db_session.commit()

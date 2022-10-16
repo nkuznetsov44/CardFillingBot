@@ -5,9 +5,7 @@ from datetime import datetime
 from enum import Enum
 from emoji import emojize
 from aiogram.types import User as TelegramapiUser
-from model import (
-    CardFill, FillScope, TelegramUser, Category, Budget, PurchaseListItem
-)
+from model import CardFill, FillScope, TelegramUser, Category, Budget, PurchaseListItem
 
 
 class Month(Enum):
@@ -33,11 +31,9 @@ class FillScopeDto:
     chat_id: int
 
     @staticmethod
-    def from_model(scope: FillScope) -> 'FillScopeDto':
+    def from_model(scope: FillScope) -> "FillScopeDto":
         return FillScopeDto(
-            scope_id=scope.scope_id,
-            scope_type=scope.scope_type,
-            chat_id=scope.chat_id
+            scope_id=scope.scope_id, scope_type=scope.scope_type, chat_id=scope.chat_id
         )
 
 
@@ -51,13 +47,13 @@ class CategoryDto:
     emoji_name: str
 
     @staticmethod
-    def from_model(category: Category) -> 'CategoryDto':
+    def from_model(category: Category) -> "CategoryDto":
         return CategoryDto(
             code=category.code,
             name=category.name,
             aliases=category.get_aliases(),
             proportion=float(category.proportion),
-            emoji_name=category.emoji_name
+            emoji_name=category.emoji_name,
         )
 
     def get_emoji(self) -> str:
@@ -75,25 +71,25 @@ class UserDto:
     language_code: str
 
     @staticmethod
-    def from_telegramapi(telegramapi_user: TelegramapiUser) -> 'UserDto':
+    def from_telegramapi(telegramapi_user: TelegramapiUser) -> "UserDto":
         return UserDto(
             id=telegramapi_user.id,
             is_bot=telegramapi_user.is_bot,
             first_name=telegramapi_user.first_name,
             last_name=telegramapi_user.last_name,
             username=telegramapi_user.username,
-            language_code=telegramapi_user.language_code
+            language_code=telegramapi_user.language_code,
         )
 
     @staticmethod
-    def from_model(user: TelegramUser) -> 'UserDto':
+    def from_model(user: TelegramUser) -> "UserDto":
         return UserDto(
             id=user.user_id,
             is_bot=user.is_bot,
             first_name=user.first_name,
             last_name=user.last_name,
             username=user.username,
-            language_code=user.language_code
+            language_code=user.language_code,
         )
 
 
@@ -109,7 +105,7 @@ class FillDto:
     scope: FillScopeDto
 
     @staticmethod
-    def from_model(fill: CardFill) -> 'FillDto':
+    def from_model(fill: CardFill) -> "FillDto":
         return FillDto(
             id=fill.fill_id,
             user=UserDto.from_model(fill.user),
@@ -117,7 +113,7 @@ class FillDto:
             amount=fill.amount,
             description=fill.description,
             category=CategoryDto.from_model(fill.category),
-            scope=FillScopeDto.from_model(fill.scope)
+            scope=FillScopeDto.from_model(fill.scope),
         )
 
 
@@ -130,12 +126,12 @@ class BudgetDto:
     monthly_limit: float
 
     @staticmethod
-    def from_model(budget: Budget) -> 'BudgetDto':
+    def from_model(budget: Budget) -> "BudgetDto":
         return Budget(
             id=budget.id,
             scope=FillScopeDto.from_model(budget.scope),
             category=CategoryDto.from_model(budget.category),
-            monthly_limit=budget.monthly_limit
+            monthly_limit=budget.monthly_limit,
         )
 
 
@@ -180,10 +176,10 @@ class PurchaseListItemDto:
     is_active: Optional[bool] = None
 
     @staticmethod
-    def from_model(purchase: PurchaseListItem) -> 'PurchaseListItemDto':
+    def from_model(purchase: PurchaseListItem) -> "PurchaseListItemDto":
         return PurchaseListItemDto(
             id=purchase.id,
             scope=purchase.scope,
             name=purchase.name,
-            is_active=purchase.is_active
+            is_active=purchase.is_active,
         )

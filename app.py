@@ -5,8 +5,15 @@ from aiogram.bot import Bot
 from aiogram.utils.executor import start_webhook
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from settings import (
-    webhook_path, webhook_url, webapp_host, webapp_port,
-    telegram_token, database_uri, scheduler_clear_jobs, log_level, tz
+    webhook_path,
+    webhook_url,
+    webapp_host,
+    webapp_port,
+    telegram_token,
+    database_uri,
+    scheduler_clear_jobs,
+    log_level,
+    tz,
 )
 from services.card_fill_service import CardFillService
 from services.cache_service import CacheService
@@ -27,25 +34,24 @@ cache_service = CacheService()
 graph_service = GraphService()
 purchase_service = PurchaseListService()
 
-scheduler = AsyncIOScheduler({
-    'apscheduler.jobstores.default': {
-        'type': 'sqlalchemy',
-        'url': database_uri
-    },
-    'apscheduler.executors.default': {
-        'class': 'apscheduler.executors.asyncio:AsyncIOExecutor',
-    },
-    'apscheduler.timezone': tz,
-})
+scheduler = AsyncIOScheduler(
+    {
+        "apscheduler.jobstores.default": {"type": "sqlalchemy", "url": database_uri},
+        "apscheduler.executors.default": {
+            "class": "apscheduler.executors.asyncio:AsyncIOExecutor",
+        },
+        "apscheduler.timezone": tz,
+    }
+)
 
 
 async def on_startup(_: Dispatcher) -> None:
     await bot.set_webhook(webhook_url)
     scheduler.start()
-    logger.info('Started scheduler')
+    logger.info("Started scheduler")
     if scheduler_clear_jobs:
         scheduler.remove_all_jobs()
-        logger.info('Removed old scheduler jobs')
+        logger.info("Removed old scheduler jobs")
 
 
 async def on_shutdown(_: Dispatcher) -> None:
@@ -60,5 +66,5 @@ def start_app() -> None:
         on_shutdown=on_shutdown,
         host=webapp_host,
         port=webapp_port,
-        skip_updates=True
+        skip_updates=True,
     )
