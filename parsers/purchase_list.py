@@ -1,8 +1,12 @@
+import logging
 from typing import Optional
 from aiogram.types import Message
 from parsers import MessageParser, ParsedMessage
 from dto import PurchaseListItemDto, FillScopeDto
 from services.card_fill_service import CardFillService
+
+
+logger = logging.getLogger(__name__)
 
 
 class PurchaseMessage(ParsedMessage):
@@ -59,6 +63,13 @@ class DeletePurchaseMessageParser(MessageParser):
         if not ("Список покупок" in message.reply_to_message.text):
             return None
 
-        return DeletePurchaseMessage(
-            message, data=[int(i.strip()) for i in message.text.split(",")]
-        )
+        try:
+            return DeletePurchaseMessage(
+                message, data=[int(i.strip()) for i in message.text.split(",")]
+            )
+        except ValueError:
+            logger.warning(
+                "Failed to convert delete purchase message to list of ints",
+                exc_info=True,
+            )
+            return None

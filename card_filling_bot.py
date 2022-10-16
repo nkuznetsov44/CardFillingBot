@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from typing import Callable, Optional
 from aiogram.types import Message
 
 from parsers import MessageParser, ParsedMessage
@@ -96,7 +96,12 @@ async def error_handler(message: Message) -> None:
 async def message_handler(message: Message) -> None:
     logger.info(f"Received message {message.text}")
     for parser in message_parsers:
-        parsed_message = parser.parse(message)
+        parsed_message: Optional[ParsedMessage] = None
+        try:
+            parsed_message = parser.parse(message)
+        except:
+            logger.exception(f"Parser {parser} failed")
+
         if parsed_message:
             logger.info(f"Handling message {parsed_message}")
             handler = message_handlers[type(parsed_message)]
