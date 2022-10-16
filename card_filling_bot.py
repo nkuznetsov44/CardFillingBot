@@ -105,6 +105,7 @@ async def message_handler(message: Message) -> None:
             except:
                 logger.exception(f"Handler {handler.__name__} failed")
                 await error_handler(message)
+            finally:
                 return
 
     await fallback_handler(message)
