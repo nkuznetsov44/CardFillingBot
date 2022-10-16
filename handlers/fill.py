@@ -36,7 +36,7 @@ async def handle_fill_message(message: FillMessage) -> None:
         )
         inline_keyboard.append([schedule_fill_button])
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
 
     sent_message = await bot.send_message(
         chat_id=message.original_message.chat.id, text=reply_text, reply_markup=keyboard
@@ -115,7 +115,7 @@ async def handle_change_category(
         )
         inline_keyboard.append([schedule_fill_button])
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
 
     message = await bot.edit_message_text(
         chat_id=callback_query.message.chat.id,

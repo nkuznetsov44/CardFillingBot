@@ -98,12 +98,12 @@ async def message_handler(message: Message) -> None:
     for parser in message_parsers:
         parsed_message = parser.parse(message)
         if parsed_message:
-            logger.info(f"Handling message {parsed_message}")
+            logger.info(f"Handling message {parsed_message.__name__}")
             handler = message_handlers[type(parsed_message)]
             try:
                 await handler(parsed_message)
             except:
-                logger.exception(f"Handler {handler} failed")
+                logger.exception(f"Handler {handler.__name__} failed")
                 await error_handler(message)
                 return
 
