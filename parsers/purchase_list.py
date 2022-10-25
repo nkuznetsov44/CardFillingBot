@@ -42,8 +42,8 @@ class PurchaseListParser(MessageParser):
         self.card_fill_service = card_fill_service
 
     def parse(self, message: Message) -> Optional[PurchaseListMessage]:
-        scope = self.card_fill_service.get_scope(message.chat.id)
         if message.text.lower() in ("список", "list"):
+            scope = self.card_fill_service.get_scope(message.chat.id)
             return PurchaseListMessage(message, data=scope)
         else:
             return None

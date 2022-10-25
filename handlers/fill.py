@@ -2,7 +2,7 @@ import logging
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from app import bot, card_fill_service, cache_service
 from settings import schedule_enabled
-from parsers.fill import FillMessage
+from parsers.fill import FillMessage, NetBalancesMessage
 from formatters import format_fill_confirmed
 from callbacks import change_category_cb, Callback
 
@@ -42,6 +42,14 @@ async def handle_fill_message(message: FillMessage) -> None:
         chat_id=message.original_message.chat.id, text=reply_text, reply_markup=keyboard
     )
     cache_service.set_fill_for_message(sent_message, fill)
+
+
+async def handle_net_balances_message(message: NetBalancesMessage) -> None:
+    card_fill_service.net_balances(message.data)
+    await bot.send_message(
+        chat_id=message.original_message.chat.id,
+        text="Текущие траты исключены из расчета баланса",
+    )
 
 
 async def handle_show_category(callback_query: CallbackQuery) -> None:

@@ -2,7 +2,7 @@ from typing import Optional
 import re
 from aiogram.types import Message
 from parsers import MessageParser, ParsedMessage
-from dto import FillDto, UserDto
+from dto import FillDto, UserDto, FillScopeDto
 from services.card_fill_service import CardFillService
 
 
@@ -44,3 +44,20 @@ class FillMessageParser(MessageParser):
             )
             return FillMessage(original_message=message, data=fill)
         return None
+
+
+class NetBalancesMessage(ParsedMessage):
+    def __init__(self, original_message: Message, data: FillScopeDto) -> None:
+        super().__init__(original_message, data)
+
+
+class NetBalancesMessageParser(MessageParser):
+    def __init__(self, card_fill_service: CardFillService) -> None:
+        self.card_fill_service = card_fill_service
+
+    def parse(self, message: Message) -> Optional[NetBalancesMessage]:
+        if message.text.lower().startswith("/net"):
+            scope = self.card_fill_service.get_scope(message.chat.id)
+            return NetBalancesMessage(message, data=scope)
+        else:
+            return None

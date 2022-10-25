@@ -4,7 +4,12 @@ from aiogram.types import Message
 
 from parsers import MessageParser, ParsedMessage
 from parsers.month import MonthMessage, MonthMessageParser
-from parsers.fill import FillMessage, FillMessageParser
+from parsers.fill import (
+    FillMessage,
+    FillMessageParser,
+    NetBalancesMessage,
+    NetBalancesMessageParser,
+)
 from parsers.category import NewCategoryMessage, NewCategoryMessageParser
 from parsers.purchase_list import (
     PurchaseMessage,
@@ -20,6 +25,7 @@ from handlers.fill import (
     handle_show_category,
     handle_change_category,
     handle_delete_fill,
+    handle_net_balances_message,
 )
 from handlers.months import handle_months_message
 from handlers.category import (
@@ -62,6 +68,7 @@ message_parsers: list[MessageParser] = [
     MonthMessageParser(),
     PurchaseMessageParser(card_fill_service),
     PurchaseListParser(card_fill_service),
+    NetBalancesMessageParser(card_fill_service),
 ]
 
 
@@ -72,6 +79,7 @@ message_handlers: dict[ParsedMessage, Callable[[ParsedMessage], None]] = {
     PurchaseMessage: handle_purchase_message,
     PurchaseListMessage: handle_get_purchases_message,
     DeletePurchaseMessage: handle_delete_purchase_message,
+    NetBalancesMessage: handle_net_balances_message,
 }
 
 

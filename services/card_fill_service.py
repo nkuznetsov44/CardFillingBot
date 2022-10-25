@@ -186,7 +186,9 @@ class CardFillService:
                 .all()
             )
 
-            data: dict[Month, dict[CategoryDto, float]] = defaultdict(lambda: defaultdict(float))
+            data: dict[Month, dict[CategoryDto, float]] = defaultdict(
+                lambda: defaultdict(float)
+            )
             for fill in fills:
                 fill_month = Month(fill.fill_date.month)
                 fill_category = CategoryDto.from_model(fill.category)
@@ -224,7 +226,9 @@ class CardFillService:
                 .all()
             )
 
-            data: dict[Month, dict[UserDto, float]] = defaultdict(lambda: defaultdict(float))
+            data: dict[Month, dict[UserDto, float]] = defaultdict(
+                lambda: defaultdict(float)
+            )
             for fill in fills:
                 fill_month = Month(fill.fill_date.month)
                 fill_user = UserDto.from_model(fill.user)
@@ -251,7 +255,9 @@ class CardFillService:
                 .all()
             )
 
-            data: dict[Month, dict[UserDto, float]] = defaultdict(lambda: defaultdict(float))
+            data: dict[Month, dict[UserDto, float]] = defaultdict(
+                lambda: defaultdict(float)
+            )
             for fill in fills:
                 fill_month = Month(fill.fill_date.month)
                 fill_user = UserDto.from_model(fill.user)
@@ -442,3 +448,16 @@ class CardFillService:
             ),
             None,
         )
+
+    def net_balances(self, scope: FillScopeDto) -> None:
+        with self.db_session() as db_session:
+            fills: list[CardFill] = (
+                db_session.query(CardFill)
+                .filter(CardFill.fill_scope == scope.scope_id)
+                .filter(CardFill.is_netted.is_(False))
+                .all()
+            )
+            for fill in fills:
+                fill.is_netted = True
+                db_session.add(fill)
+            db_session.commit()
