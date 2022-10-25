@@ -230,7 +230,7 @@ class CardFillService:
                 fill_user = UserDto.from_model(fill.user)
                 data[fill_month][fill_user] += fill.amount
 
-            ret: dict[Month, list[UserSumOverPeriodDto]] = defaultdict[list]
+            ret: dict[Month, list[UserSumOverPeriodDto]] = defaultdict(list)
             for month, mdata in data.items():
                 for user, amount in mdata.items():
                     ret[month].append(UserSumOverPeriodDto(user=user, amount=amount))
@@ -257,7 +257,7 @@ class CardFillService:
                 fill_user = UserDto.from_model(fill.user)
                 data[fill_month][fill_user] += fill.amount
 
-            ret: dict[Month, list[UserSumOverPeriodWithBalanceDto]] = defaultdict[list]
+            ret: dict[Month, list[UserSumOverPeriodWithBalanceDto]] = defaultdict(list)
             for month, mdata in data.items():
                 month_total = sum(mdata.values())
                 num_users = len(mdata)
