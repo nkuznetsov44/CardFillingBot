@@ -24,7 +24,7 @@ class Month(Enum):
 
 
 @dataclass_json
-@dataclass
+@dataclass(frozen=True)
 class FillScopeDto:
     scope_id: Optional[int]
     scope_type: str
@@ -38,7 +38,7 @@ class FillScopeDto:
 
 
 @dataclass_json
-@dataclass
+@dataclass(frozen=True)
 class CategoryDto:
     code: str
     name: str
@@ -61,7 +61,7 @@ class CategoryDto:
 
 
 @dataclass_json
-@dataclass
+@dataclass(frozen=True)
 class UserDto:
     id: int
     is_bot: bool
@@ -94,7 +94,7 @@ class UserDto:
 
 
 @dataclass_json
-@dataclass
+@dataclass(frozen=True)
 class FillDto:
     id: Optional[int]
     user: UserDto
@@ -120,7 +120,7 @@ class FillDto:
 
 
 @dataclass_json
-@dataclass
+@dataclass(frozen=True)
 class BudgetDto:
     id: int
     scope: FillScopeDto
@@ -137,40 +137,40 @@ class BudgetDto:
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class UserSumOverPeriodDto:
     user: UserDto
     amount: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class UserSumOverPeriodWithBalanceDto:
     user: UserDto
     amount: float
     balance: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class CategorySumOverPeriodDto:
     category: CategoryDto
     amount: float
     monthly_limit: Optional[float]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ProportionOverPeriodDto:
     proportion_target: Optional[float]
     proportion_actual: Optional[float]
 
 
-@dataclass
+@dataclass(frozen=True)
 class SummaryOverPeriodDto:
     by_user: List[UserSumOverPeriodDto]
     by_category: List[CategorySumOverPeriodDto]
     proportions: ProportionOverPeriodDto
 
 
-@dataclass
+@dataclass(frozen=True)
 class PurchaseListItemDto:
     id: int
     scope: FillScopeDto
