@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Sequence
 import re
 from sqlalchemy import (
     Column,
@@ -30,6 +30,7 @@ class CardFill(Base):
     category = relationship("Category", back_populates="card_fills", lazy="subquery")
     fill_scope = Column(Integer, ForeignKey("fill_scope.scope_id"))
     scope = relationship("FillScope", back_populates="card_fills", lazy="subquery")
+    is_netted = Column("is_netted", Boolean)
 
     def __repr__(self) -> str:
         return (
@@ -79,9 +80,18 @@ class Category(Base):
         aliases.append(alias)
         self.aliases = ",".join(aliases)
 
-    def fill_fits_category(self, fill_description: str) -> bool:
+    def desc_fits_category(self, description: str) -> bool:
         aliases_re = [re.compile(alias, re.IGNORECASE) for alias in self.get_aliases()]
-        return any(pattern.match(fill_description) for pattern in aliases_re)
+        return any(pattern.match(description) for pattern in aliases_re)
+
+    @staticmethod
+    def by_desc(
+        description: str, categories: Sequence["Category"], default: "Category"
+    ) -> "Category":
+        return next(
+            filter(lambda cat: cat.desc_fits_category(description), categories),
+            default,
+        )
 
     def __repr__(self) -> str:
         return (

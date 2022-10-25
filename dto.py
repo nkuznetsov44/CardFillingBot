@@ -103,6 +103,7 @@ class FillDto:
     description: Optional[str]
     category: Optional[CategoryDto]
     scope: FillScopeDto
+    is_netted: bool = False
 
     @staticmethod
     def from_model(fill: CardFill) -> "FillDto":
@@ -114,6 +115,7 @@ class FillDto:
             description=fill.description,
             category=CategoryDto.from_model(fill.category),
             scope=FillScopeDto.from_model(fill.scope),
+            is_netted=fill.is_netted,
         )
 
 

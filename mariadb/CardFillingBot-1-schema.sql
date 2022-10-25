@@ -66,6 +66,7 @@ CREATE TABLE `card_fill` (
   `description` varchar(255) DEFAULT NULL,
   `category_code` varchar(255) DEFAULT 'OTHER',
   `fill_scope` int(11) NOT NULL DEFAULT 1,
+  `is_netted` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`fill_id`),
   KEY `user_id` (`user_id`),
   KEY `category_code` (`category_code`),
@@ -110,41 +111,6 @@ CREATE TABLE `fill_scope` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Temporary view structure for view `monthly_report_by_category`
---
-
-DROP TABLE IF EXISTS `monthly_report_by_category`;
-/*!50001 DROP VIEW IF EXISTS `monthly_report_by_category`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `monthly_report_by_category` AS SELECT 
- 1 AS `rownumber`,
- 1 AS `fill_scope`,
- 1 AS `fill_year`,
- 1 AS `month_num`,
- 1 AS `category_code`,
- 1 AS `amount`,
- 1 AS `monthly_limit`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `monthly_report_by_user`
---
-
-DROP TABLE IF EXISTS `monthly_report_by_user`;
-/*!50001 DROP VIEW IF EXISTS `monthly_report_by_user`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `monthly_report_by_user` AS SELECT 
- 1 AS `rownumber`,
- 1 AS `fill_scope`,
- 1 AS `fill_year`,
- 1 AS `month_num`,
- 1 AS `user_id`,
- 1 AS `amount`*/;
-SET character_set_client = @saved_cs_client;
-
---
 -- Table structure for table `purchase`
 --
 
@@ -179,50 +145,3 @@ CREATE TABLE `telegram_user` (
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Final view structure for view `monthly_report_by_category`
---
-
-/*!50001 DROP VIEW IF EXISTS `monthly_report_by_category`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_general_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
-/*!50001 VIEW `monthly_report_by_category` AS select row_number() over ( partition by NULL order by NULL) AS `rownumber`,`cf`.`fill_scope` AS `fill_scope`,year(`cf`.`fill_date`) AS `fill_year`,month(`cf`.`fill_date`) AS `month_num`,`cat`.`code` AS `category_code`,sum(`cf`.`amount`) AS `amount`,`b`.`monthly_limit` AS `monthly_limit` from ((`card_fill` `cf` join `category` `cat` on(`cat`.`code` = `cf`.`category_code`)) left join `budget` `b` on(`b`.`fill_scope` = `cf`.`fill_scope` and `b`.`category_code` = `cat`.`code`)) group by `cf`.`fill_scope`,year(`cf`.`fill_date`),month(`cf`.`fill_date`),`cat`.`name`,`cat`.`proportion`,`b`.`monthly_limit` */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `monthly_report_by_user`
---
-
-/*!50001 DROP VIEW IF EXISTS `monthly_report_by_user`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_general_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
-/*!50001 VIEW `monthly_report_by_user` AS select row_number() over ( partition by NULL order by NULL) AS `rownumber`,`cf`.`fill_scope` AS `fill_scope`,year(`cf`.`fill_date`) AS `fill_year`,month(`cf`.`fill_date`) AS `month_num`,`tuser`.`user_id` AS `user_id`,sum(`cf`.`amount`) AS `amount` from (`card_fill` `cf` join `telegram_user` `tuser` on(`tuser`.`user_id` = `cf`.`user_id`)) group by `cf`.`fill_scope`,`tuser`.`username`,year(`cf`.`fill_date`),month(`cf`.`fill_date`) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on 2022-10-16 14:19:47
