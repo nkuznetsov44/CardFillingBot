@@ -30,7 +30,7 @@ class CardFill(Base):
     category = relationship("Category", back_populates="card_fills", lazy="subquery")
     fill_scope = Column(Integer, ForeignKey("fill_scope.scope_id"))
     scope = relationship("FillScope", back_populates="card_fills", lazy="subquery")
-    is_netted = Column("is_netted", Boolean)
+    is_netted = Column("is_netted", Boolean, default=False)
 
     def __repr__(self) -> str:
         return (
