@@ -186,7 +186,7 @@ class CardFillService:
                 .all()
             )
 
-            data: dict[Month, dict[CategoryDto, float]] = defaultdict(lambda: defaultdict(0.0))
+            data: dict[Month, dict[CategoryDto, float]] = defaultdict(lambda: defaultdict(float))
             for fill in fills:
                 fill_month = Month(fill.fill_date.month)
                 fill_category = CategoryDto.from_model(fill.category)
@@ -224,7 +224,7 @@ class CardFillService:
                 .all()
             )
 
-            data: dict[Month, dict[UserDto, float]] = defaultdict(lambda: defaultdict(0.0))
+            data: dict[Month, dict[UserDto, float]] = defaultdict(lambda: defaultdict(float))
             for fill in fills:
                 fill_month = Month(fill.fill_date.month)
                 fill_user = UserDto.from_model(fill.user)
@@ -251,7 +251,7 @@ class CardFillService:
                 .all()
             )
 
-            data: dict[Month, dict[UserDto, float]] = defaultdict(lambda: defaultdict(0.0))
+            data: dict[Month, dict[UserDto, float]] = defaultdict(lambda: defaultdict(float))
             for fill in fills:
                 fill_month = Month(fill.fill_date.month)
                 fill_user = UserDto.from_model(fill.user)
