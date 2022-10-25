@@ -42,7 +42,7 @@ class FillScopeDto:
 class CategoryDto:
     code: str
     name: str
-    aliases: List[str]
+    aliases: tuple[str]
     proportion: float
     emoji_name: str
 
