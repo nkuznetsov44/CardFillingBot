@@ -51,7 +51,7 @@ class CategoryDto:
         return CategoryDto(
             code=category.code,
             name=category.name,
-            aliases=category.get_aliases(),
+            aliases=tuple(category.get_aliases()),
             proportion=float(category.proportion),
             emoji_name=category.emoji_name,
         )
