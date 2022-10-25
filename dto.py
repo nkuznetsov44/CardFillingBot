@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from datetime import datetime
@@ -165,8 +165,8 @@ class ProportionOverPeriodDto:
 
 @dataclass(frozen=True)
 class SummaryOverPeriodDto:
-    by_user: List[UserSumOverPeriodDto]
-    by_category: List[CategorySumOverPeriodDto]
+    by_user: tuple[UserSumOverPeriodDto]
+    by_category: tuple[CategorySumOverPeriodDto]
     proportions: ProportionOverPeriodDto
 
 
