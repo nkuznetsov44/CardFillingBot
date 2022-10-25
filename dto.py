@@ -94,7 +94,7 @@ class UserDto:
 
 
 @dataclass_json
-@dataclass(frozen=True)
+@dataclass
 class FillDto:
     id: Optional[int]
     user: UserDto
