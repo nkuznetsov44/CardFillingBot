@@ -419,7 +419,7 @@ class CardFillService:
         cache: Optional[dict[CategoryDto, BudgetDto]] = None,
     ) -> Optional[BudgetDto]:
         if cache and category in cache:
-            return cache[CategoryDto]
+            return cache[category]
 
         with self.db_session() as db_session:
             budget = (
