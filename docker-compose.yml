@@ -37,9 +37,9 @@ services:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_HOST=cardfillingbot-db
+      - MYSQL_HOST=${MYSQL_HOST}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - REDIS_HOST=cardfillingbot-redis
+      - REDIS_HOST=${REDIS_HOST}
       - REDIS_DB=0
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - TZ=${TZ}

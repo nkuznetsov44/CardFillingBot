@@ -1,8 +1,9 @@
 from typing import TypeVar, Generic, ClassVar, Any, Optional
 from aiogram.types import CallbackQuery
-from app import App
+from aiogram.filters.callback_data import CallbackData
 from abc import ABC, abstractmethod
 
+from app import App
 from parsers import ParsedMessage
 from callbacks import Callback
 
@@ -18,6 +19,10 @@ class _BHandler:
     @property
     def card_fill_service(self):
         return self.app.card_fill_service
+
+    @property
+    def graph_service(self):
+        return self.app.graph_service
 
     @property
     def bot(self):
@@ -36,7 +41,7 @@ class BaseMessageHandler(_BHandler, Generic[TParsedMessage], ABC):
 class BaseCallbackHandler(_BHandler, ABC):
     callback_filter: ClassVar[Any]
 
-    def __init_subclass__(cls, *, callback: Callback) -> None:
+    def __init_subclass__(cls, *, callback: Callback | CallbackData) -> None:
         cls.callback_filter = callback.filter()
         return super().__init_subclass__()
 

@@ -86,51 +86,47 @@ class ShowCategoryCallbackHandler(BaseCallbackHandler, callback=Callback.SHOW_CA
         )
 
 
-# class ChangeCategoryCallbackHandler(BaseCallbackHandler, callback=Callback.CHANGE_CATEGORY):
-#     async def handle(self, callback: CallbackQuery, callback_data: Any | None = None) -> None:
-#         pass
+class ChangeCategoryCallbackHandler(BaseCallbackHandler, callback=ChangeCategoryCallback):
+    async def handle(self, callback: CallbackQuery, callback_data: Any | None = None) -> None:
+        assert isinstance(callback_data, ChangeCategoryCallback)
+        fill = self.cache_service.get_fill_for_message(callback.message)
+        fill = self.card_fill_service.change_category_for_fill(fill.id, callback_data.category_code)
 
-async def handle_change_category(
-    self, callback_query: CallbackQuery, callback_data: dict[str, str]
-) -> None:
-    category_code = callback_data["category_code"]
-    fill = cache_service.get_fill_for_message(callback_query.message)
-    fill = card_fill_service.change_category_for_fill(fill.id, category_code)
-
-    budget = card_fill_service.get_budget_for_category(fill.category, fill.scope)
-    current_category_usage = (
-        card_fill_service.get_current_month_budget_usage_for_category(
-            fill.category, fill.scope
+        budget = self.card_fill_service.get_budget_for_category(fill.category, fill.scope)
+        current_category_usage = (
+            self.card_fill_service.get_current_month_budget_usage_for_category(
+                fill.category, fill.scope
+            )
         )
-    )
 
-    reply_text = format_fill_confirmed(fill, budget, current_category_usage)
+        reply_text = format_fill_confirmed(fill, budget, current_category_usage)
 
-    change_category_button = InlineKeyboardButton(
-        text="Сменить категорию", callback_data=Callback.SHOW_CATEGORY.value
-    )
-    delete_fill_button = InlineKeyboardButton(
-        text="Удалить", callback_data=Callback.DELETE_FILL.value
-    )
-    inline_keyboard = [[change_category_button], [delete_fill_button]]
+        change_category_button = InlineKeyboardButton(
+            text="Сменить категорию", callback_data=Callback.SHOW_CATEGORY.value
+        )
+        delete_fill_button = InlineKeyboardButton(
+            text="Удалить", callback_data=Callback.DELETE_FILL.value
+        )
+        inline_keyboard = [[change_category_button], [delete_fill_button]]
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+        keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
 
-    message = await bot.edit_message_text(
-        chat_id=callback_query.message.chat.id,
-        message_id=callback_query.message.message_id,
-        text=reply_text,
-        reply_markup=keyboard,
-    )
-    cache_service.set_fill_for_message(message, fill)  # caching updated fill
+        message = await self.bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=reply_text,
+            reply_markup=keyboard,
+        )
+        self.cache_service.set_fill_for_message(message, fill)  # caching updated fill
 
 
-async def handle_delete_fill(callback_query: CallbackQuery) -> None:
-    fill = cache_service.get_fill_for_message(callback_query.message)
-    card_fill_service.delete_fill(fill)
-    await bot.edit_message_text(
-        chat_id=callback_query.message.chat.id,
-        message_id=callback_query.message.message_id,
-        text=f"Запись {fill.amount} р. ({fill.description}) удалена.",
-        reply_markup=None,
-    )
+class DeleteFillCallbackHandler(BaseCallbackHandler, callback=Callback.DELETE_FILL):
+    async def handle(self, callback: CallbackQuery, callback_data: Any | None = None) -> None:
+        fill = self.cache_service.get_fill_for_message(callback.message)
+        self.card_fill_service.delete_fill(fill)
+        await self.bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=f"Запись {fill.amount} р. ({fill.description}) удалена.",
+            reply_markup=None,
+        )

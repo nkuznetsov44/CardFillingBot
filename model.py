@@ -67,7 +67,7 @@ class StoredTelegramUser(Base):
     card_fills = relationship("StoredCardFill")
 
     def to_entity_user(self) -> User:
-        User(
+        return User(
             id=self.user_id,
             is_bot=self.is_bot,
             first_name=self.first_name,
@@ -168,7 +168,7 @@ class StoredBudget(Base):
     def to_entity_budget(self) -> Budget:
         return Budget(
             id=self.id,
-            scope=self.fill_scope.to_entity_fill_scope(),
+            scope=self.scope.to_entity_fill_scope(),
             category=self.category.to_entity_category(),
             monthly_limit=self.monthly_limit,
         )
