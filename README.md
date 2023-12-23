@@ -4,7 +4,7 @@ Run local
 `docker compose -f docker-compose-db.yml up --build -d`
 
 ```
-export TELEGRAM_TOKEN="1287505901:AAHbvLIThia0UGPAzmYgDFIntTRYMxY-slo"
+export TELEGRAM_TOKEN=""
 export MYSQL_HOST="localhost"
 export MYSQL_DATABASE="cardfillingbot"
 export MYSQL_USER="cardfillingbot"
