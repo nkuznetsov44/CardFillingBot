@@ -2,7 +2,7 @@ from ast import Call
 from enum import Enum, unique
 from typing import Callable
 from aiogram.types import CallbackQuery
-from aiogram.utils.callback_data import CallbackData
+from aiogram.filters.callback_data import CallbackData
 
 
 @unique
@@ -27,6 +27,5 @@ class Callback(Enum):
         return lambda cq: cq.data == self.value
 
 
-change_category_cb = CallbackData(Callback.CHANGE_CATEGORY.value, "category_code")
-schedule_month_cb = CallbackData(Callback.SCHEDULE_MONTH.value, "month")
-schedule_day_cb = CallbackData(Callback.SCHEDULE_DAY.value, "month", "day")
+class ChangeCategoryCallback(CallbackData, prefix="category_code"):
+    category_code: str

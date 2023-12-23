@@ -3,7 +3,7 @@ version: "3.8"
 services:
   mariadb:
     image: mariadb
-    container_name: cardfillingbot-mariadb-${ENVIRONMENT}
+    container_name: cardfillingbot-db
     volumes:
       # - ./card_filling_bot/mariadb/CardFillingBot-1-schema.sql:/docker-entrypoint-initdb.d/CardFillingBot-1-schema.sql
       # - ./card_filling_bot/mariadb/CardFillingBot-2-categories.sql:/docker-entrypoint-initdb.d/CardFillingBot-2-categories.sql
@@ -11,45 +11,36 @@ services:
       - ./mariadb/CardFillingBot-4-testingscope.sql:/docker-entrypoint-initdb.d/CardFillingBot-4-testingscope.sql
     environment:
       - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
-      - MARIADB_DATABASE=CardFillingBot
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=CardFillingBot
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
       - TZ=${TZ}
   redis:
     build:
       dockerfile: Dockerfile-redis
       context: .
-    image: nkuznetsov44/cardfillingbot-redis:${ENVIRONMENT}
-    container_name: cardfillingbot-redis-${ENVIRONMENT}
+    image: nkuznetsov44/cardfillingbot-redis
+    container_name: cardfillingbot-redis
     volumes:
       - ./redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
   cardfillingbot:
     build:
       dockerfile: Dockerfile-cardfillingbot
       context: .
-    image: nkuznetsov44/cardfillingbot:${ENVIRONMENT}
-    container_name: cardfillingbot-${ENVIRONMENT}
+    image: nkuznetsov44/cardfillingbot
+    container_name: cardfillingbot
     depends_on:
       - mariadb
       - redis
     restart: on-failure
-    ports:
-      - ${WEBAPP_PORT}:8000
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_HOST=cardfillingbot-mariadb-${ENVIRONMENT}
-      - MYSQL_DATABASE=CardFillingBot
-      - REDIS_HOST=cardfillingbot-redis-${ENVIRONMENT}
+      - MYSQL_HOST=cardfillingbot-db
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - REDIS_HOST=cardfillingbot-redis
       - REDIS_DB=0
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - WEBHOOK_HOST=${WEBHOOK_HOST}
-      - WEBHOOK_PATH=${WEBHOOK_PATH}
-      - WEBAPP_HOST=${WEBAPP_HOST}
-      - WEBAPP_PORT=${WEBAPP_PORT}
-      - SCHEDULER_CLEAR_JOBS=${SCHEDULER_CLEAR_JOBS}
-      - MINOR_PROPORTION_USER_ID=${MINOR_PROPORTION_USER_ID}
-      - MAJOR_PROPORTION_USER_ID=${MAJOR_PROPORTION_USER_ID}
       - TZ=${TZ}
+      - LOG_LEVEL=${LOG_LEVEL}

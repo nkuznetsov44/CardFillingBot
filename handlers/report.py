@@ -1,9 +1,9 @@
 from datetime import datetime
+from aiogram.enums import ParseMode
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     CallbackQuery,
-    ParseMode,
 )
 from app import bot, cache_service, card_fill_service, graph_service
 from formatters import (
@@ -13,15 +13,15 @@ from formatters import (
     format_monthly_report_group,
     format_yearly_report,
 )
-from dto import UserDto, FillScopeDto
-from settings import pay_silivri_scope_id
+from entities import User, FillScope
+from settings import settings
 from callbacks import Callback
 
 
 async def handle_my_fills_current_year(callback_query: CallbackQuery) -> None:
     months = cache_service.get_months_for_message(callback_query.message)
     year = datetime.now().year
-    from_user = UserDto.from_telegramapi(callback_query.from_user)
+    from_user = User.from_telegramapi(callback_query.from_user)
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     fills = card_fill_service.get_user_fills_in_months(from_user, months, year, scope)
 
@@ -43,7 +43,7 @@ async def handle_my_fills_current_year(callback_query: CallbackQuery) -> None:
 async def handle_my_fills_previous_year(callback_query: CallbackQuery) -> None:
     months = cache_service.get_months_for_message(callback_query.message)
     previous_year = datetime.now().year - 1
-    from_user = UserDto.from_telegramapi(callback_query.from_user)
+    from_user = User.from_telegramapi(callback_query.from_user)
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
     fills = card_fill_service.get_user_fills_in_months(
         from_user, months, previous_year, scope
@@ -59,13 +59,13 @@ async def handle_my_fills_previous_year(callback_query: CallbackQuery) -> None:
 
 async def handle_per_month_current_year(callback_query: CallbackQuery) -> None:
     scope = card_fill_service.get_scope(callback_query.message.chat.id)
-    if scope.scope_id == pay_silivri_scope_id:
+    if scope.scope_id == settings.pay_silivri_scope_id:
         return await _per_month_current_year_group(callback_query, scope)
     return await _per_month_current_year_default(callback_query, scope)
 
 
 async def _per_month_current_year_group(
-    callback_query: CallbackQuery, scope: FillScopeDto
+    callback_query: CallbackQuery, scope: FillScope
 ) -> None:
     months = cache_service.get_months_for_message(callback_query.message)
     year = datetime.now().year
@@ -93,7 +93,7 @@ async def _per_month_current_year_group(
 
 
 async def _per_month_current_year_default(
-    callback_query: CallbackQuery, scope: FillScopeDto
+    callback_query: CallbackQuery, scope: FillScope
 ) -> None:
     months = cache_service.get_months_for_message(callback_query.message)
     year = datetime.now().year

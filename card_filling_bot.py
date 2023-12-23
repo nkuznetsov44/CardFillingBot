@@ -1,6 +1,7 @@
-import logging
-from typing import Callable, Optional
+from typing import Optional, Type
 from aiogram.types import Message
+from aiogram.utils.callback_answer import CallbackAnswerMiddleware
+import asyncio
 
 from parsers import MessageParser, ParsedMessage
 from parsers.month import MonthMessage, MonthMessageParser
@@ -20,114 +21,132 @@ from parsers.purchase_list import (
     DeletePurchaseMessageParser,
 )
 
-from handlers.fill import (
-    handle_fill_message,
-    handle_show_category,
-    handle_change_category,
-    handle_delete_fill,
-    handle_net_balances_message,
-)
-from handlers.months import handle_months_message
-from handlers.category import (
-    handle_new_category_message,
-    handle_create_category,
-    handle_confirm_category,
-)
-from handlers.report import (
-    handle_my_fills_current_year,
-    handle_my_fills_previous_year,
-    handle_per_month_current_year,
-    handle_per_month_previous_year,
-    handle_per_year,
-)
-from handlers.purchase import (
-    handle_delete_purchase_message,
-    handle_get_purchases_message,
-    handle_purchase_message,
-)
-from handlers.schedule import (
-    handle_schedule_day,
-    handle_schedule_fill,
-    handle_schedule_month,
-    handle_scheduled_fill_confirm,
-    handle_scheduled_fill_declined,
-)
+# from handlers.fill import (
+#     handle_show_category,
+#     handle_change_category,
+#     handle_delete_fill,
+# )
+from handlers.base import BaseMessageHandler, BaseCallbackHandler
+from handlers.fill import FillMessageHandler, NetBalancesMessageHandler, ShowCategoryCallbackHandler
 
-from callbacks import Callback, change_category_cb, schedule_day_cb, schedule_month_cb
+# from handlers.months import handle_months_message
+# from handlers.category import (
+#     handle_new_category_message,
+#     handle_create_category,
+#     handle_confirm_category,
+# )
+# from handlers.report import (
+#     handle_my_fills_current_year,
+#     handle_my_fills_previous_year,
+#     handle_per_month_current_year,
+#     handle_per_month_previous_year,
+#     handle_per_year,
+# )
+# from handlers.purchase import (
+#     handle_delete_purchase_message,
+#     handle_get_purchases_message,
+#     handle_purchase_message,
+# )
 
-from app import dp, bot, card_fill_service, cache_service, start_app
+from callbacks import Callback
+
+from app import App
 
 
-logger = logging.getLogger(__name__)
+class CardFillingBot:
+    message_handlers: dict[ParsedMessage, Type[BaseMessageHandler]] = {
+        FillMessage: FillMessageHandler,
+        # MonthMessage: handle_months_message,
+        # NewCategoryMessage: handle_new_category_message,
+        # PurchaseMessage: handle_purchase_message,
+        # PurchaseListMessage: handle_get_purchases_message,
+        # DeletePurchaseMessage: handle_delete_purchase_message,
+        NetBalancesMessage: NetBalancesMessageHandler,
+    }
 
+    callback_handlers: list[Type[BaseCallbackHandler]] = [
+        ShowCategoryCallbackHandler,
+    ]
 
-message_parsers: list[MessageParser] = [
-    NewCategoryMessageParser(cache_service),
-    DeletePurchaseMessageParser(),
-    FillMessageParser(card_fill_service),
-    MonthMessageParser(),
-    PurchaseMessageParser(card_fill_service),
-    PurchaseListParser(card_fill_service),
-    NetBalancesMessageParser(card_fill_service),
-]
+    def __init__(self, app: App) -> None:
+        self.app = app
+        self.message_parsers = self._init_message_parsers(self.app)
+        self.app.dp.message()(self.message_handler)
+        self.app.dp.callback_query.middleware(CallbackAnswerMiddleware())
+        self._register_callback_handlers(self.app)
 
+    async def start(self) -> None:
+        await self.app.start()
 
-message_handlers: dict[ParsedMessage, Callable[[ParsedMessage], None]] = {
-    FillMessage: handle_fill_message,
-    MonthMessage: handle_months_message,
-    NewCategoryMessage: handle_new_category_message,
-    PurchaseMessage: handle_purchase_message,
-    PurchaseListMessage: handle_get_purchases_message,
-    DeletePurchaseMessage: handle_delete_purchase_message,
-    NetBalancesMessage: handle_net_balances_message,
-}
+    @property
+    def logger(self):
+        return self.app.logger
 
+    @property
+    def bot(self):
+        return self.app.bot
 
-async def fallback_handler(message: Message) -> None:
-    logger.warning(f'Fallback to default handler for message "{message.text}"')
-    await bot.send_message(
-        chat_id=message.chat.id,
-        text=(
-            'Укажите сумму и комментарий в сообщении, например: "150 макдак", для добавления новой записи, '
-            'или один или несколько месяцев, например, "январь февраль", для просмотра статистики.'
-        ),
-    )
+    @classmethod
+    def _init_message_parsers(cls, app: App) -> list[MessageParser]:
+        return [
+            NewCategoryMessageParser(app.cache_service),
+            DeletePurchaseMessageParser(),
+            FillMessageParser(app.card_fill_service),
+            MonthMessageParser(),
+            PurchaseMessageParser(app.card_fill_service),
+            PurchaseListParser(app.card_fill_service),
+            NetBalancesMessageParser(app.card_fill_service),
+        ]
 
+    @classmethod
+    def _register_callback_handlers(cls, app: App) -> None:
+        for callback_handler_cls in cls.callback_handlers:
+            app.dp.callback_query(callback_handler_cls.callback_filter)(callback_handler_cls(app).handle)
 
-async def error_handler(message: Message) -> None:
-    await bot.send_message(
-        chat_id=message.chat.id, text="Произошла ошибка обработки. Попробуйте позже."
-    )
+    async def fallback_handler(self, message: Message) -> None:
+        self.logger.warning(f'Fallback to default handler for message "{message.text}"')
+        await self.bot.send_message(
+            chat_id=message.chat.id,
+            text=(
+                'Укажите сумму и комментарий в сообщении, например: "150 макдак", для добавления новой записи, '
+                'или один или несколько месяцев, например, "январь февраль", для просмотра статистики.'
+            ),
+        )
 
+    async def error_handler(self, message: Message) -> None:
+        await self.bot.send_message(
+            chat_id=message.chat.id, text="Произошла ошибка обработки. Попробуйте позже."
+        )
 
-@dp.message_handler()
-async def message_handler(message: Message) -> None:
-    logger.info(f"Received message {message.text}")
-    for parser in message_parsers:
-        parsed_message: Optional[ParsedMessage] = None
-        try:
-            parsed_message = parser.parse(message)
-        except:
-            logger.exception(f"Parser {parser} failed")
-
-        if parsed_message:
-            logger.info(f"Handling message {parsed_message}")
-            handler = message_handlers[type(parsed_message)]
+    async def message_handler(self, message: Message) -> None:
+        self.logger.info(f"Received message {message.text}")
+        for parser in self.message_parsers:
+            parsed_message: Optional[ParsedMessage] = None
             try:
-                await handler(parsed_message)
+                parsed_message = parser.parse(message)
             except:
-                logger.exception(f"Handler {handler} failed")
-                await error_handler(message)
-            finally:
-                return
+                self.logger.exception(f"Parser {parser} failed")
 
-    await fallback_handler(message)
+            if parsed_message:
+                self.logger.info(f"Handling message {parsed_message}")
+                handler_cls = self.message_handlers[type(parsed_message)]
+                try:
+                    await handler_cls(app).handle(parsed_message)
+                    # await handler(parsed_message)
+                except:
+                    self.logger.exception(f"Handler {handler_cls} failed")
+                    await self.error_handler(message)
+                finally:
+                    return
+
+        await self.fallback_handler(message)
 
 
+"""
 dp.register_callback_query_handler(
     handle_show_category, Callback.SHOW_CATEGORY.filter()
 )
-dp.register_callback_query_handler(handle_change_category, change_category_cb.filter())
+dp.register_callback_query_handler(handle_change_category, Callback.CHANGE_CATEGORY.filter())
 dp.register_callback_query_handler(handle_delete_fill, Callback.DELETE_FILL.filter())
 dp.register_callback_query_handler(
     handle_create_category, Callback.NEW_CATEGORY.filter()
@@ -151,15 +170,17 @@ dp.register_callback_query_handler(handle_per_year, Callback.YEARLY_REPORT.filte
 dp.register_callback_query_handler(
     handle_schedule_fill, Callback.SCHEDULE_FILL.filter()
 )
-dp.register_callback_query_handler(handle_schedule_month, schedule_month_cb.filter())
-dp.register_callback_query_handler(handle_schedule_day, schedule_day_cb.filter())
 dp.register_callback_query_handler(
     handle_scheduled_fill_confirm, Callback.SCHEDULE_CONFIRM.filter()
 )
 dp.register_callback_query_handler(
     handle_scheduled_fill_declined, Callback.SCHEDULE_DECLINE.filter()
 )
+"""
 
 
 if __name__ == "__main__":
-    start_app()
+    app = App()
+    bot = CardFillingBot(app)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(bot.start())

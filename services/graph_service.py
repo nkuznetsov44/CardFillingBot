@@ -1,15 +1,15 @@
-from typing import List, Optional
+from typing import Optional
 from io import BytesIO
 import matplotlib
 from matplotlib import pyplot as plt
-from dto import CategorySumOverPeriodDto, UserSumOverPeriodWithBalanceDto
+from entities import CategorySumOverPeriod, UserSumOverPeriodWithBalance
 
 matplotlib.use("Agg")
 
 
 class GraphService:
     def create_by_category_diagram(
-        self, data: List[CategorySumOverPeriodDto], name: str
+        self, data: list[CategorySumOverPeriod], name: str
     ) -> Optional[bytes]:
         if not data:
             return None
@@ -18,7 +18,7 @@ class GraphService:
         return self._draw_figure(data, labels, name)
 
     def create_by_user_diagram(
-        self, data: List[UserSumOverPeriodWithBalanceDto], name: str
+        self, data: list[UserSumOverPeriodWithBalance], name: str
     ) -> Optional[bytes]:
         if not data:
             return None
@@ -26,7 +26,7 @@ class GraphService:
         data = [by_user.amount for by_user in data]
         return self._draw_figure(data, labels, name)
 
-    def _draw_figure(self, data: List[float], labels: List[str], name: str) -> bytes:
+    def _draw_figure(self, data: list[float], labels: list[str], name: str) -> bytes:
         fig = plt.figure()
         ax = fig.add_axes([0, 0, 1, 1])
         ax.axis("equal")

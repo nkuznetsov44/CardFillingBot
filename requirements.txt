@@ -17,6 +17,7 @@ idna
 kiwisolver
 marshmallow
 marshmallow-enum
+marshmallow_dataclass
 matplotlib
 multidict
 mypy-extensions

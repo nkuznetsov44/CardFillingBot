@@ -1,18 +1,18 @@
-from typing import List, Dict, Optional
+from typing import Optional
 import prettytable
 from emoji import emojize
-from dto import (
+from entities import (
     Month,
-    FillDto,
-    PurchaseListItemDto,
-    UserDto,
-    FillScopeDto,
-    UserSumOverPeriodDto,
-    CategorySumOverPeriodDto,
-    ProportionOverPeriodDto,
-    SummaryOverPeriodDto,
-    BudgetDto,
-    UserSumOverPeriodWithBalanceDto,
+    Fill,
+    PurchaseListItem,
+    User,
+    FillScope,
+    UserSumOverPeriod,
+    CategorySumOverPeriod,
+    ProportionOverPeriod,
+    SummaryOverPeriod,
+    Budget,
+    UserSumOverPeriodWithBalance,
 )
 
 
@@ -32,7 +32,7 @@ month_names = {
 }
 
 
-def format_fills_list_as_table(fills: List[FillDto], scope: FillScopeDto) -> str:
+def format_fills_list_as_table(fills: list[Fill], scope: FillScope) -> str:
     if scope.scope_type == "PRIVATE":
         max_desc_width = 17
     else:
@@ -67,11 +67,11 @@ def format_fills_list_as_table(fills: List[FillDto], scope: FillScopeDto) -> str
 
 
 def format_user_fills(
-    fills: List[FillDto],
-    from_user: UserDto,
-    months: List[Month],
+    fills: list[Fill],
+    from_user: User,
+    months: list[Month],
     year: int,
-    scope: FillScopeDto,
+    scope: FillScope,
 ) -> str:
     m_names = ", ".join(map(month_names.get, months))
     if len(fills) == 0:
@@ -88,7 +88,7 @@ def format_user_fills(
     return text
 
 
-def format_by_user_block(data: List[UserSumOverPeriodDto], scope: FillScopeDto) -> str:
+def format_by_user_block(data: list[UserSumOverPeriod], scope: FillScope) -> str:
     if scope.scope_type == "PRIVATE":
         return "\n".join([f"{user_sum.amount:.0f}" for user_sum in data])
     return "\n".join(
@@ -97,7 +97,7 @@ def format_by_user_block(data: List[UserSumOverPeriodDto], scope: FillScopeDto) 
 
 
 def format_by_user_balance_block(
-    data: List[UserSumOverPeriodWithBalanceDto], scope: FillScopeDto
+    data: list[UserSumOverPeriodWithBalance], scope: FillScope
 ) -> str:
     if scope.scope_type == "PRIVATE":
         raise NotImplementedError
@@ -110,7 +110,7 @@ def format_by_user_balance_block(
 
 
 def format_by_category_block(
-    data: List[CategorySumOverPeriodDto], display_limits: bool
+    data: list[CategorySumOverPeriod], display_limits: bool
 ) -> str:
     rows = []
     for category_sum in data:
@@ -121,7 +121,7 @@ def format_by_category_block(
     return "_Категории:_\n" + "\n".join(rows)
 
 
-def format_proportions_block(data: ProportionOverPeriodDto) -> str:
+def format_proportions_block(data: ProportionOverPeriod) -> str:
     return (
         f"_Пропорции:_\n  - текущая: {data.proportion_actual:.2f}\n"
         f"  - ожидаемая: {data.proportion_target:.2f}"
@@ -129,7 +129,7 @@ def format_proportions_block(data: ProportionOverPeriodDto) -> str:
 
 
 def format_monthly_report(
-    data: Dict[Month, SummaryOverPeriodDto], year: int, scope: FillScopeDto
+    data: dict[Month, SummaryOverPeriod], year: int, scope: FillScope
 ) -> str:
     message_text = ""
     for month, data_month in data.items():
@@ -138,16 +138,16 @@ def format_monthly_report(
         message_text += format_by_category_block(
             data_month.by_category, display_limits=True
         )
-        if scope.scope_type == "GROUP":
+        if scope.scope_type == "GROUP" and data_month.proportions is not None:
             message_text += "\n\n" + format_proportions_block(data_month.proportions)
         message_text += "\n\n"
     return message_text.replace("-", "\\-").replace("(", "\\(").replace(")", "\\)")
 
 
 def format_monthly_report_group(
-    data: Dict[Month, List[UserSumOverPeriodWithBalanceDto]],
+    data: dict[Month, list[UserSumOverPeriodWithBalance]],
     year: int,
-    scope: FillScopeDto,
+    scope: FillScope,
 ) -> str:
     message_text = ""
     for month, data_month in data.items():
@@ -157,18 +157,18 @@ def format_monthly_report_group(
 
 
 def format_yearly_report(
-    data: SummaryOverPeriodDto, year: int, scope: FillScopeDto
+    data: SummaryOverPeriod, year: int, scope: FillScope
 ) -> str:
     caption = f"*За {year} год:*\n"
     caption += format_by_user_block(data.by_user, scope) + "\n\n"
     caption += format_by_category_block(data.by_category, display_limits=False)
-    if scope.scope_type == "GROUP":
+    if scope.scope_type == "GROUP" and data.proportions is not None:
         caption += "\n\n" + format_proportions_block(data.proportions)
     return caption.replace("-", "\\-")
 
 
 def format_fill_confirmed(
-    fill: FillDto, budget: Optional[BudgetDto], current_category_usage: Optional[float]
+    fill: Fill, budget: Optional[Budget], current_category_usage: Optional[float]
 ) -> str:
     reply_text = f"Принято {fill.amount}р. от @{fill.user.username}"
     if fill.description:
@@ -179,7 +179,7 @@ def format_fill_confirmed(
     return reply_text
 
 
-def format_purchase_list(purchases: list[PurchaseListItemDto]) -> str:
+def format_purchase_list(purchases: list[PurchaseListItem]) -> str:
     message = "🛍️ Список покупок:"
 
     for i, purchase in enumerate(purchases):
