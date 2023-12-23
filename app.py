@@ -30,5 +30,5 @@ class App:
         if settings.app_mode == AppMode.WEBHOOK:
             raise NotImplementedError
         elif settings.app_mode == AppMode.POLLING:
-            await self.bot.delete_webhook()
+            await self.bot.delete_webhook(drop_pending_updates=True)
             await self.dp.start_polling(self.bot)
