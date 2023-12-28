@@ -31,6 +31,7 @@ class _Settings:
         self.tz = os.getenv("TZ", "Europe/Moscow")
 
         self.pay_silivri_scope_id = 5
+        self.admin_user_id = self._maybe_int(os.getenv("ADMIN_USER_ID"))
 
         self.app_mode = AppMode(os.getenv("APP_MODE", "POLLING"))
 

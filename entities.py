@@ -13,6 +13,11 @@ class AppMode(Enum):
 
 
 @unique
+class ServiceCommandType(Enum):
+    DUMP = 'dump'
+
+
+@unique
 class Month(Enum):
     january = 1
     february = 2

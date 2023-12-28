@@ -74,6 +74,10 @@ class CardFillService:
             self.minor_proportion_user = None
             self.major_proportion_user = None
 
+    def get_all_fills(self) -> list[Fill]:
+        with self.db_session() as db_session:
+            return [f.to_entity_fill() for f in db_session.query(StoredCardFill).all()]
+
     def get_scope(self, chat_id: int) -> FillScope:
         with self.db_session() as db_session:
             scope: StoredFillScope = (

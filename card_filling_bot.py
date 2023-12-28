@@ -12,6 +12,7 @@ from parsers.fill import (
     NetBalancesMessage,
     NetBalancesMessageParser,
 )
+from parsers.command import ServiceCommandMessage, ServiceCommandMessageParser
 # from parsers.category import NewCategoryMessage, NewCategoryMessageParser
 # from parsers.purchase_list import (
 #     PurchaseMessage,
@@ -37,6 +38,7 @@ from handlers.report import (
     PerMonthPreviousYearCallbackHandler,
     PerYearCallbackHandler,
 )
+from handlers.command import ServiceCommandMessageHandler
 
 # from handlers.category import (
 #     handle_new_category_message,
@@ -55,6 +57,7 @@ class CardFillingBot:
         FillMessage: FillMessageHandler,
         MonthMessage: MonthsMessageHandler,
         NetBalancesMessage: NetBalancesMessageHandler,
+        ServiceCommandMessage: ServiceCommandMessageHandler,
         # NewCategoryMessage: handle_new_category_message,
         # PurchaseMessage: handle_purchase_message,
         # PurchaseListMessage: handle_get_purchases_message,
@@ -100,6 +103,7 @@ class CardFillingBot:
             # PurchaseMessageParser(app.card_fill_service),
             # PurchaseListParser(app.card_fill_service),
             NetBalancesMessageParser(app.card_fill_service),
+            ServiceCommandMessageParser(),
         ]
 
     @classmethod

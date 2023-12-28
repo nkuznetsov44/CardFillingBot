@@ -42,3 +42,4 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - TZ=${TZ}
       - LOG_LEVEL=${LOG_LEVEL}
+      - ADMIN_USER_ID=${ADMIN_USER_ID}
