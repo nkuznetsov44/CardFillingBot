@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from aiogram.types import Message
 from parsers import MessageParser, ParsedMessage
-from dto import PurchaseListItemDto, FillScopeDto
+from entities import PurchaseListItem, FillScope
 from services.card_fill_service import CardFillService
 
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class PurchaseMessage(ParsedMessage):
-    def __init__(self, original_message: Message, data: PurchaseListItemDto) -> None:
+    def __init__(self, original_message: Message, data: PurchaseListItem) -> None:
         super().__init__(original_message, data)
 
 
@@ -27,13 +27,13 @@ class PurchaseMessageParser(MessageParser):
         else:
             return None
 
-        item = PurchaseListItemDto(id=None, scope=scope, name=name)
+        item = PurchaseListItem(id=None, scope=scope, name=name)
 
         return PurchaseMessage(message, item)
 
 
 class PurchaseListMessage(ParsedMessage):
-    def __init__(self, original_message: Message, data: FillScopeDto) -> None:
+    def __init__(self, original_message: Message, data: FillScope) -> None:
         super().__init__(original_message, data)
 
 

@@ -1,7 +1,7 @@
-from typing import Optional, List
+from typing import Optional
 import re
 from aiogram.types import Message
-from dto import Month
+from entities import Month
 from parsers import MessageParser, ParsedMessage
 
 
@@ -46,7 +46,7 @@ class MonthMessageParser(MessageParser):
     def parse(self, message: Message) -> Optional[MonthMessage]:
         """Returns list of months on successful parse or None if no months were found."""
         message_text = message.text
-        results: List[Month] = []
+        results: list[Month] = []
         if message_text:
             for word in message_text.split(" "):
                 for month in list(Month):

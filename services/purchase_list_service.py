@@ -1,21 +1,21 @@
 import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
-from settings import database_uri
-from dto import FillScopeDto, PurchaseListItemDto
+from settings import settings
+from entities import FillScope, PurchaseListItem
 from model import PurchaseListItem
 
 
 class PurchaseListService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self._db_engine = create_engine(database_uri, pool_recycle=3600)
+        self._db_engine = create_engine(settings.database_uri, pool_recycle=3600)
         self.logger.info(
-            f"Initialized db_engine for purchase list service at {database_uri}"
+            f"Initialized db_engine for purchase list service at {settings.database_uri}"
         )
         self.DbSession = scoped_session(sessionmaker(bind=self._db_engine))
 
-    def add_purchase(self, purchase: PurchaseListItemDto) -> None:
+    def add_purchase(self, purchase: PurchaseListItem) -> None:
         db_session = self.DbSession()
         try:
             new_item = PurchaseListItem(
@@ -29,7 +29,7 @@ class PurchaseListService:
         finally:
             self.DbSession.remove()
 
-    def get_list(self, scope: FillScopeDto) -> list[PurchaseListItemDto]:
+    def get_list(self, scope: FillScope) -> list[PurchaseListItem]:
         db_session = self.DbSession()
         try:
             items: list[PurchaseListItem] = (
@@ -38,7 +38,7 @@ class PurchaseListService:
                 .filter(PurchaseListItem.fill_scope == scope.scope_id)
                 .all()
             )
-            return [PurchaseListItemDto.from_model(item) for item in items]
+            return [PurchaseListItem.from_model(item) for item in items]
         finally:
             self.DbSession.remove()
 

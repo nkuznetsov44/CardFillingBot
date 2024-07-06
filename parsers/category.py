@@ -1,6 +1,6 @@
 import logging
-from typing import Optional, Tuple
-from dto import CategoryDto, FillDto
+from typing import Optional
+from entities import Category, Fill
 from aiogram.types import Message
 import emoji
 from parsers import MessageParser, ParsedMessage
@@ -9,7 +9,7 @@ from services.cache_service import CacheService
 
 class NewCategoryMessage(ParsedMessage):
     def __init__(
-        self, original_message: Message, data: Tuple[CategoryDto, FillDto]
+        self, original_message: Message, data: tuple[Category, Fill]
     ) -> None:
         super().__init__(original_message, data)
 
@@ -40,7 +40,7 @@ class NewCategoryMessageParser(MessageParser):
             aliases = []
             if fill.description:
                 aliases.append(fill.description)
-            category = CategoryDto(
+            category = Category(
                 name=cat_name,
                 code=cat_code,
                 aliases=aliases,

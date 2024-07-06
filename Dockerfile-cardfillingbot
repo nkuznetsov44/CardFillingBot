@@ -1,4 +1,4 @@
-FROM python:3.9.7-alpine
+FROM python:3.11-alpine
 
 # add packages for matplotlib
 RUN apk add g++ jpeg-dev zlib-dev libjpeg make

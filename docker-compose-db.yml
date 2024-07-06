@@ -3,7 +3,7 @@ version: "3.8"
 services:
   mariadb:
     image: mariadb
-    container_name: cardfillingbot-mariadb-${ENVIRONMENT}
+    container_name: cardfillingbot-db
     volumes:
       # - ./card_filling_bot/mariadb/CardFillingBot-1-schema.sql:/docker-entrypoint-initdb.d/CardFillingBot-1-schema.sql
       # - ./card_filling_bot/mariadb/CardFillingBot-2-categories.sql:/docker-entrypoint-initdb.d/CardFillingBot-2-categories.sql
@@ -11,10 +11,9 @@ services:
       - ./mariadb/CardFillingBot-4-testingscope.sql:/docker-entrypoint-initdb.d/CardFillingBot-4-testingscope.sql
     environment:
       - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
-      - MARIADB_DATABASE=CardFillingBot
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=CardFillingBot
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
       - TZ=${TZ}
     ports:
       - 3306:3306
@@ -22,8 +21,8 @@ services:
     build:
       dockerfile: Dockerfile-redis
       context: .
-    image: nkuznetsov44/cardfillingbot-redis:${ENVIRONMENT}
-    container_name: cardfillingbot-redis-${ENVIRONMENT}
+    image: nkuznetsov44/cardfillingbot-redis
+    container_name: cardfillingbot-redis
     volumes:
       - ./redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
     ports:
