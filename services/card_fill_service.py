@@ -193,7 +193,7 @@ class CardFillService:
         with self.db_session() as db_session:
             fills: list[StoredCardFill] = (
                 db_session.query(StoredCardFill)
-                .filter(StoredCardFill.fill_scope == scope.scope_id)
+                .filter(StoredCardFill.fill_scope.in_(self._get_scope_id_filter(scope)))
                 .filter(extract("year", StoredCardFill.fill_date) == year)
                 .filter(
                     extract("month", StoredCardFill.fill_date).in_([m.value for m in months])
@@ -266,7 +266,7 @@ class CardFillService:
         with self.db_session() as db_session:
             fills: list[StoredCardFill] = (
                 db_session.query(StoredCardFill)
-                .filter(StoredCardFill.fill_scope.in_(self._get_scope_id_filter(scope)))
+                .filter(StoredCardFill.fill_scope == scope.scope_id)
                 .filter(extract("year", StoredCardFill.fill_date) == year)
                 .filter(
                     extract("month", StoredCardFill.fill_date).in_([m.value for m in months])
