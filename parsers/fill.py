@@ -2,11 +2,11 @@ from typing import Optional
 import re
 from aiogram.types import Message
 from parsers import MessageParser, ParsedMessage
-from entities import Fill, User, FillScope
+from entities import Fill, User, FillScope, Currency
 from services.card_fill_service import CardFillService
 
 
-number_regexp = re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[.]?\d*(?:[eE][-+]?\d+)?")
+number_with_currency_regexp = re.compile(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[.]?\d*(?:[eE][-+]?\d+)?([reREреРЕ])?")
 
 
 class FillMessage(ParsedMessage):
@@ -22,9 +22,13 @@ class FillMessageParser(MessageParser):
         """Returns Fill on successful parse or None if no fill was found."""
         message_text = message.text
         cnt = 0
-        for number_match in re.finditer(number_regexp, message_text):
+        for number_match in re.finditer(number_with_currency_regexp, message_text):
             cnt += 1
             amount = number_match.group()
+            currency = None
+            if amount[-1] in ('r', 'R', 'e', 'E', 'р', 'Р', 'Е', 'е'):
+                amount, currency_alias = amount[:-1], amount[-1]
+                currency = Currency.get_by_alias(currency_alias.lower())
             before_phrase = message_text[: number_match.start()].strip()
             after_phrase = message_text[number_match.end() :].strip()
             if len(before_phrase) > 0 and len(after_phrase) > 0:
@@ -41,7 +45,9 @@ class FillMessageParser(MessageParser):
                 description=description,
                 category=None,
                 scope=scope,
+                currency=currency,
             )
+            print(fill)
             return FillMessage(original_message=message, data=fill)
         return None
 

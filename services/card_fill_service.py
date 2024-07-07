@@ -7,7 +7,7 @@ from decimal import Decimal
 from sqlalchemy import create_engine, extract
 from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from settings import settings
-from model import StoredCardFill, StoredCategory, StoredTelegramUser, StoredFillScope, StoredBudget
+from model import StoredCardFill, StoredCategory, StoredTelegramUser, StoredFillScope, StoredBudget, StoredCurrencyRate
 from entities import (
     Month,
     Fill,
@@ -111,6 +111,10 @@ class CardFillService:
             )
             fill.category = category.to_entity_category()
 
+            if fill.currency:
+                currency = db_session.query(StoredCurrencyRate).get(fill.currency.value)
+                fill.amount = fill.amount * currency.rate
+
             card_fill = StoredCardFill(
                 user_id=user.user_id,
                 fill_date=fill.fill_date,
@@ -118,6 +122,7 @@ class CardFillService:
                 description=fill.description,
                 category_code=category.code,
                 fill_scope=fill.scope.scope_id,
+                currency=fill.currency.value if fill.currency else None,
             )
 
             db_session.add(card_fill)
@@ -222,13 +227,18 @@ class CardFillService:
                     )
             return ret
 
+    def _get_scope_id_filter(self, scope: FillScope) -> list[int]:
+        if scope.report_scopes:
+            return scope.report_scopes
+        return [scope.scope_id]
+
     def get_monthly_report_by_user(
         self, months: list[Month], year: int, scope: FillScope
     ) -> dict[Month, list[UserSumOverPeriod]]:
         with self.db_session() as db_session:
             fills: list[StoredCardFill] = (
                 db_session.query(StoredCardFill)
-                .filter(StoredCardFill.fill_scope == scope.scope_id)
+                .filter(StoredCardFill.fill_scope.in_(self._get_scope_id_filter(scope)))
                 .filter(extract("year", StoredCardFill.fill_date) == year)
                 .filter(
                     extract("month", StoredCardFill.fill_date).in_([m.value for m in months])
@@ -256,7 +266,7 @@ class CardFillService:
         with self.db_session() as db_session:
             fills: list[StoredCardFill] = (
                 db_session.query(StoredCardFill)
-                .filter(StoredCardFill.fill_scope == scope.scope_id)
+                .filter(StoredCardFill.fill_scope.in_(self._get_scope_id_filter(scope)))
                 .filter(extract("year", StoredCardFill.fill_date) == year)
                 .filter(
                     extract("month", StoredCardFill.fill_date).in_([m.value for m in months])

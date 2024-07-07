@@ -39,7 +39,7 @@ async def handle_create_category(callback_query: CallbackQuery) -> None:
         chat_id=callback_query.message.chat.id,
         message_id=callback_query.message.message_id,
         text=(
-            f"Создание категории для записи: {fill.amount} р. ({fill.description}).\n"
+            f"Создание категории для записи: {fill.amount} ({fill.description}).\n"
             "Ответом на это сообщение пришлите название, код и пропорцию для новой категории через запятую, "
             f'например "Еда, FOOD, 0.8, {emojize(":carrot:")}".'
         ),

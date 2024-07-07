@@ -72,7 +72,7 @@ class ShowCategoryCallbackHandler(BaseCallbackHandler, callback=Callback.SHOW_CA
         keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
         reply_text = (
-            f"Принято {fill.amount}р. от @{fill.user.username}.\nВыберите категорию"
+            f"Принято {fill.amount} от @{fill.user.username}.\nВыберите категорию"
         )
         if fill.description:
             reply_text += f" для <{fill.description}>"
@@ -127,6 +127,6 @@ class DeleteFillCallbackHandler(BaseCallbackHandler, callback=Callback.DELETE_FI
         await self.bot.edit_message_text(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=f"Запись {fill.amount} р. ({fill.description}) удалена.",
+            text=f"Запись {fill.amount} ({fill.description}) удалена.",
             reply_markup=None,
         )

@@ -32,6 +32,9 @@ month_names = {
 }
 
 
+BASE_CURRENCY_ALIAS = 'дин'
+
+
 def format_fills_list_as_table(fills: list[Fill], scope: FillScope) -> str:
     if scope.scope_type == "PRIVATE":
         max_desc_width = 17
@@ -91,9 +94,12 @@ def format_user_fills(
 def format_by_user_block(data: list[UserSumOverPeriod], scope: FillScope) -> str:
     if scope.scope_type == "PRIVATE":
         return "\n".join([f"{user_sum.amount:.0f}" for user_sum in data])
-    return "\n".join(
-        [f"@{user_sum.user.username}: {user_sum.amount:.0f}" for user_sum in data]
-    ).replace("_", "\\_")
+    else:
+        result = "\n".join(
+            [f"@{user_sum.user.username}: {user_sum.amount:.0f}" for user_sum in data]
+        )
+        result += f"\nВсего: {sum(user_sum.amount for user_sum in data):.0f}"
+        return result.replace("_", "\\_")
 
 
 def format_by_user_balance_block(
@@ -170,7 +176,7 @@ def format_yearly_report(
 def format_fill_confirmed(
     fill: Fill, budget: Optional[Budget], current_category_usage: Optional[float]
 ) -> str:
-    reply_text = f"Принято {fill.amount}р. от @{fill.user.username}"
+    reply_text = f"Принято {fill.amount} {BASE_CURRENCY_ALIAS}. от @{fill.user.username}"
     if fill.description:
         reply_text += f": {fill.description}"
     reply_text += f", категория: {fill.category.get_emoji()} {fill.category.name}."

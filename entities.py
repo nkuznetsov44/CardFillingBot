@@ -18,6 +18,27 @@ class ServiceCommandType(Enum):
 
 
 @unique
+class Currency(Enum):
+    RUB = 'RUB'
+    EUR = 'EUR'
+
+    @staticmethod
+    def get_by_alias(alias: str) -> 'Currency':
+        return {
+            'r': Currency.RUB,
+            'e': Currency.EUR,
+            'р': Currency.RUB,
+            'е': Currency.EUR,
+        }[alias]
+
+
+@dataclass
+class CurrencyRate:
+    currency: Currency
+    rate: float
+
+
+@unique
 class Month(Enum):
     january = 1
     february = 2
@@ -38,6 +59,7 @@ class FillScope:
     scope_id: Optional[int]
     scope_type: str
     chat_id: int
+    report_scopes: Optional[list[int]] = None
 
 
 @dataclass(frozen=True)
@@ -86,6 +108,7 @@ class Fill:
     category: Optional[Category]
     scope: FillScope
     is_netted: bool = False
+    currency: Optional[Currency] = None
 
 
 @dataclass(frozen=True)

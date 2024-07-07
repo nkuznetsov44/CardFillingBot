@@ -9,10 +9,11 @@ from sqlalchemy import (
     DateTime,
     Float,
     Numeric,
+    JSON,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from entities import FillScope, Category, User, Fill, Budget, PurchaseListItem
+from entities import FillScope, Category, User, Fill, Budget, PurchaseListItem, CurrencyRate, Currency
 
 
 Base = declarative_base()
@@ -32,6 +33,7 @@ class StoredCardFill(Base):
     fill_scope = Column(Integer, ForeignKey("fill_scope.scope_id"))
     scope = relationship("StoredFillScope", back_populates="card_fills", lazy="subquery")
     is_netted = Column("is_netted", Boolean, default=False)
+    currency = Column("currency", String)
 
     def to_entity_fill(self) -> Fill:
         return Fill(
@@ -43,6 +45,7 @@ class StoredCardFill(Base):
             category=self.category.to_entity_category(),
             scope=self.scope.to_entity_fill_scope(),
             is_netted=self.is_netted,
+            currency=Currency(self.currency) if self.currency else None,
         )
 
     def __repr__(self) -> str:
@@ -51,7 +54,8 @@ class StoredCardFill(Base):
             f'<"fill_id": {self.fill_id}, "user": {self.user}, '
             f'"fill_date": {self.fill_date}, "amount": {self.amount}, '
             f'"description": {self.description}, "category": {self.category},'
-            f'"scope": {self.scope}>'
+            f'"scope": {self.scope},'
+            f'"currency: {self.currency}>'
         )
 
 
@@ -141,6 +145,7 @@ class StoredFillScope(Base):
     scope_id = Column("scope_id", Integer, primary_key=True)
     scope_type = Column("scope_type", String)
     chat_id = Column("chat_id", Integer)
+    report_scopes = Column("report_scopes", JSON)
     card_fills = relationship("StoredCardFill")
 
     def __repr__(self) -> str:
@@ -151,8 +156,18 @@ class StoredFillScope(Base):
 
     def to_entity_fill_scope(self) -> FillScope:
         return FillScope(
-            scope_id=self.scope_id, scope_type=self.scope_type, chat_id=self.chat_id
+            scope_id=self.scope_id, scope_type=self.scope_type, chat_id=self.chat_id, report_scopes=self.report_scopes
         )
+
+
+class StoredCurrencyRate(Base):
+    __tablename__ = "currency_rate"
+
+    currency = Column("currency", String, primary_key=True)
+    rate = Column("rate", Float)
+
+    def to_entity_currency_rate(self) -> CurrencyRate:
+        return CurrencyRate(currency=Currency(self.currency), rate=self.rate)
 
 
 class StoredBudget(Base):
