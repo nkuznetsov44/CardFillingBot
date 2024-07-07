@@ -126,7 +126,7 @@ def format_by_category_block(
             RED_CROSS = emojize(':cross_mark:')
             GREEN_TICK = emojize(':check_mark_button:')
             limit_emoji = RED_CROSS if is_limit_exceeded else GREEN_TICK
-            text += f" (из {category_sum.monthly_limit:.0f} {limit_emoji})"
+            text += f" ({limit_emoji} {category_sum.monthly_limit:.0f})"
         rows.append(text)
     return "_Категории:_\n" + "\n".join(rows)
 
