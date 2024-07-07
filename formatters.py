@@ -122,7 +122,7 @@ def format_by_category_block(
     for category_sum in data:
         text = f"  - {category_sum.category.get_emoji()} {category_sum.category.name}: {category_sum.amount:.0f}"
         if display_limits and category_sum.monthly_limit:
-            is_limit_exceeded = category_sum.monthly_limit > category_sum.amount
+            is_limit_exceeded = category_sum.amount > category_sum.monthly_limit
             RED_CROSS = emojize(':cross_mark:')
             GREEN_TICK = emojize(':check_mark_button:')
             limit_emoji = RED_CROSS if is_limit_exceeded else GREEN_TICK
