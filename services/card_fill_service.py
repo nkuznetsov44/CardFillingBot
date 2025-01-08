@@ -3,7 +3,6 @@ import logging
 from contextlib import contextmanager
 from typing import Optional
 from datetime import datetime
-from decimal import Decimal
 from sqlalchemy import create_engine, extract
 from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from settings import settings
@@ -19,6 +18,7 @@ from entities import (
     FillScope,
     Budget,
     UserSumOverPeriodWithBalance,
+    Quarter,
 )
 
 
@@ -119,11 +119,6 @@ class CardFillService:
         with self.db_session() as db_session:
             return [cat.to_entity_category() for cat in db_session.query(StoredCategory).all()]
 
-    def list_categories_with_budget(self, scope: FillScope) -> list[tuple[Category, Budget]]:
-        budget_cache: dict[Category, Budget] = dict()
-        categories = self.list_categories()
-        return [(category, self.get_budget_for_category(category, scope, budget_cache)) for category in categories]
-
     def create_new_category(self, category: Category) -> Category:
         with self.db_session() as db_session:
             stored_category = StoredCategory(
@@ -164,34 +159,43 @@ class CardFillService:
                 db_session.query(StoredCardFill)
                 .filter(StoredCardFill.fill_scope.in_(self._get_scope_id_filter(scope)))
                 .filter(extract("year", StoredCardFill.fill_date) == year)
-                .filter(
-                    extract("month", StoredCardFill.fill_date).in_([m.value for m in months])
-                )
                 .all()
             )
 
-            data: dict[Month, dict[Category, float]] = defaultdict(
+            monthly_data: dict[Month, dict[Category, float]] = defaultdict(
                 lambda: defaultdict(float)
             )
+            quarter_data: dict[Quarter, dict[Category, float]] = defaultdict(lambda: defaultdict(float))
+            year_data: dict[Category, float] = defaultdict(float)
             for fill in fills:
                 fill_month = Month(fill.fill_date.month)
+                fill_quarter = Quarter.from_month(fill_month)
                 fill_category = fill.category.to_entity_category()
-                data[fill_month][fill_category] += fill.amount
+                monthly_data[fill_month][fill_category] += fill.amount
+                quarter_data[fill_quarter][fill_category] += fill.amount
+                year_data[fill_category] += fill.amount
 
             ret: dict[Month, list[CategorySumOverPeriod]] = defaultdict(list)
-            budget_cache: dict[Category, Budget] = dict()
-            for month, mdata in data.items():
-                for category, amount in mdata.items():
-                    monthly_limit = None
-                    if budget := self.get_budget_for_category(
-                        category, scope, cache=budget_cache
-                    ):
-                        monthly_limit = budget.monthly_limit
+            budgets = {budget.category.code: budget for budget in self.list_budgets(scope)}
+            categories = year_data.keys()
+            for month in months:
+                quarter = Quarter.from_month(month)
+                mdata = monthly_data[month]
+                qdata = quarter_data[quarter]
+                for category in categories:
+                    budget = budgets.get(category.code)
                     ret[month].append(
                         CategorySumOverPeriod(
-                            amount=amount,
                             category=category,
-                            monthly_limit=monthly_limit,
+                            month=month,
+                            quarter=quarter,
+                            year=year,
+                            amount=mdata.get(category, 0),
+                            monthly_limit=budget.monthly_limit if budget else None,
+                            quarter_amount=qdata.get(category, 0),
+                            quarter_limit=budget.quarter_limit if budget else None,
+                            year_amount=year_data.get(category, 0),
+                            year_limit=budget.year_limit if budget else None,
                         )
                     )
             return ret
@@ -296,49 +300,7 @@ class CardFillService:
             )
             return [f.to_entity_fill() for f in fills]
 
-    def get_yearly_report(self, year: int, scope: FillScope) -> SummaryOverPeriod:
-        with self.db_session() as db_session:
-            by_user_query = (
-                "select u.user_id, sum(cf.amount) as amount "
-                "from card_fill cf "
-                "join telegram_user u on cf.user_id = u.user_id "
-                f"where year(cf.fill_date) = {year} and cf.fill_scope = {scope.scope_id} "
-                "group by u.username"
-            )
-            by_user_rows = db_session.execute(by_user_query).fetchall()
-            by_user: list[UserSumOverPeriod] = []
-            for user_id, amount in by_user_rows:
-                user = db_session.query(StoredTelegramUser).get(user_id)
-                by_user.append(UserSumOverPeriod(user.to_entity_user(), amount))
-
-            by_category_query = (
-                "select cat.code as category_code, sum(cf.amount) as amount "
-                "from card_fill cf "
-                "join category cat on cf.category_code = cat.code "
-                f"where year(cf.fill_date) = {year} and cf.fill_scope = {scope.scope_id} "
-                "group by cat.code"
-            )
-            by_category_rows = db_session.execute(by_category_query).fetchall()
-            by_category: list[CategorySumOverPeriod] = []
-            for category_code, amount in by_category_rows:
-                category = db_session.query(StoredCategory).get(category_code)
-                by_category.append(
-                    CategorySumOverPeriod(
-                        category.to_entity_category(), amount, None
-                    )
-                )
-
-            return SummaryOverPeriod(by_user=by_user, by_category=by_category)
-
-    def get_budget_for_category(
-        self,
-        category: Category,
-        scope: FillScope,
-        cache: Optional[dict[Category, Budget]] = None,
-    ) -> Optional[Budget]:
-        if cache and category in cache:
-            return cache[category]
-
+    def get_budget_for_category(self, category: Category, scope: FillScope) -> Optional[Budget]:
         with self.db_session() as db_session:
             budget = (
                 db_session.query(StoredBudget)
@@ -346,13 +308,20 @@ class CardFillService:
                 .filter(StoredBudget.fill_scope == scope.scope_id)
                 .one_or_none()
             )
-            if cache is not None:
-                cache[category] = budget
             if budget:
                 return budget.to_entity_budget()
             return None
 
-    def get_current_month_budget_usage_for_category(
+    def list_budgets(self, scope: FillScope) -> list[Budget]:
+        with self.db_session() as db_session:
+            budgets: list[StoredBudget] = (
+                db_session.query(StoredBudget)
+                .filter(StoredBudget.fill_scope == scope.scope_id)
+                .all()
+            )
+            return [sb.to_entity_budget() for sb in budgets]
+
+    def get_current_budget_usage_for_category(
         self, category: Category, scope: FillScope
     ) -> Optional[CategorySumOverPeriod]:
         current_month, current_year = Month(datetime.now().month), datetime.now().year

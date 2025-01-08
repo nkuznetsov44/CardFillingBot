@@ -12,10 +12,7 @@ class MonthsMessageHandler(BaseMessageHandler[MonthMessage]):
         stat = InlineKeyboardButton(
             text="Отчет за месяцы", callback_data=Callback.MONTHLY_REPORT.value
         )
-        yearly_stat = InlineKeyboardButton(
-            text="С начала года", callback_data=Callback.YEARLY_REPORT.value
-        )
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[[my], [stat], [yearly_stat]])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[my], [stat]])
         sent_message = await self.bot.send_message(
             chat_id=message.original_message.chat.id,
             text=f'Выбраны месяцы: {", ".join(map(month_names.get, months))}. Какая информация интересует?',

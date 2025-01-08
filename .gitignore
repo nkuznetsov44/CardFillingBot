@@ -10,3 +10,4 @@ pyvenv.cfg
 *.log
 .env
 mariadb/CardFillingBot-0-dumpwithdata.sql
+mariadb/dump.sql

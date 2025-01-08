@@ -13,9 +13,13 @@ class GraphService:
     ) -> Optional[bytes]:
         if not data:
             return None
-        labels = [by_category.category.name for by_category in data]
-        data = [by_category.amount for by_category in data]
-        return self._draw_figure(data, labels, name)
+        diagram_data: list[float] = []
+        diagram_labels: list[str] = []
+        for item in data:
+            if item.amount > 0:
+                diagram_data.append(item.amount)
+                diagram_labels.append(item.category.name)
+        return self._draw_figure(diagram_data, diagram_labels, name)
 
     def create_by_user_diagram(
         self, data: list[UserSumOverPeriodWithBalance], name: str

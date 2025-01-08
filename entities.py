@@ -54,6 +54,28 @@ class Month(Enum):
     december = 12
 
 
+@unique
+class Quarter(Enum):
+    q1 = 1
+    q2 = 2
+    q3 = 3
+    q4 = 4
+
+    @classmethod
+    def from_month(cls, month: Month) -> 'Quarter':
+        match month.value:
+            case 1 | 2 | 3:
+                return cls.q1
+            case 4 | 5 | 6:
+                return cls.q2
+            case 7 | 8 | 9:
+                return cls.q3
+            case 10 | 11 | 12:
+                return cls.q4
+            case _:
+                raise ValueError(f'Unexpected month value {month}')
+
+
 @dataclass(frozen=True)
 class FillScope:
     scope_id: Optional[int]
@@ -116,6 +138,8 @@ class Budget:
     scope: FillScope
     category: Category
     monthly_limit: float
+    quarter_limit: Optional[float] = None
+    year_limit: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -142,8 +166,15 @@ class UserSumOverPeriodWithBalance:
 @dataclass(frozen=True)
 class CategorySumOverPeriod:
     category: Category
+    month: Month
+    quarter: Quarter
+    year: int
     amount: float
     monthly_limit: Optional[float]
+    quarter_amount: float
+    quarter_limit: Optional[float]
+    year_amount: float
+    year_limit: Optional[float]
 
 
 @dataclass(frozen=True)

@@ -12,7 +12,6 @@ class Callback(Enum):
     MY_FILLS_PREVIOUS_YEAR = "fills_previous_year"
     MONTHLY_REPORT = "stat"
     MONTHLY_REPORT_PREVIOUS_YEAR = "previous_year"
-    YEARLY_REPORT = "yearly_stat"
 
     def filter(self) -> Callable[[CallbackQuery], bool]:
         return lambda cq: cq.data == self.value

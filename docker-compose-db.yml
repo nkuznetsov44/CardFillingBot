@@ -5,9 +5,7 @@ services:
     image: mariadb
     container_name: cardfillingbot-db
     volumes:
-      # - ./card_filling_bot/mariadb/CardFillingBot-1-schema.sql:/docker-entrypoint-initdb.d/CardFillingBot-1-schema.sql
-      # - ./card_filling_bot/mariadb/CardFillingBot-2-categories.sql:/docker-entrypoint-initdb.d/CardFillingBot-2-categories.sql
-      - ./mariadb/CardFillingBot-0-dumpwithdata.sql:/docker-entrypoint-initdb.d/CardFillingBot-0-dumpwithdata.sql
+      - ./mariadb/dump.sql:/docker-entrypoint-initdb.d/CardFillingBot-0-dumpwithdata.sql
       - ./mariadb/CardFillingBot-4-testingscope.sql:/docker-entrypoint-initdb.d/CardFillingBot-4-testingscope.sql
     environment:
       - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes

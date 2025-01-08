@@ -12,7 +12,7 @@ class FillMessageHandler(BaseMessageHandler[FillMessage]):
         fill = self.card_fill_service.handle_new_fill(fill)
         budget = self.card_fill_service.get_budget_for_category(fill.category, fill.scope)
         current_category_usage = (
-            self.card_fill_service.get_current_month_budget_usage_for_category(
+            self.card_fill_service.get_current_budget_usage_for_category(
                 fill.category, fill.scope
             )
         )
@@ -86,7 +86,7 @@ class ChangeCategoryCallbackHandler(BaseCallbackHandler, callback=ChangeCategory
 
         budget = self.card_fill_service.get_budget_for_category(fill.category, fill.scope)
         current_category_usage = (
-            self.card_fill_service.get_current_month_budget_usage_for_category(
+            self.card_fill_service.get_current_budget_usage_for_category(
                 fill.category, fill.scope
             )
         )

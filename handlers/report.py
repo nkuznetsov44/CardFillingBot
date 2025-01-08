@@ -14,7 +14,6 @@ from formatters import (
     format_user_fills,
     format_monthly_report,
     format_monthly_report_group,
-    format_yearly_report,
 )
 from entities import User, FillScope
 from settings import settings
@@ -159,18 +158,3 @@ class PerMonthPreviousYearCallbackHandler(BaseCallbackHandler, callback=Callback
             parse_mode=ParseMode.MARKDOWN_V2,
         )
         self.cache_service.set_months_for_message(sent_message, months)
-
-
-class PerYearCallbackHandler(BaseCallbackHandler, callback=Callback.YEARLY_REPORT):
-    async def handle(self, callback: CallbackQuery, callback_data: Any | None = None) -> None:
-        year = datetime.now().year
-        scope = self.card_fill_service.get_scope(callback.message.chat.id)
-        data = self.card_fill_service.get_yearly_report(year, scope)
-        diagram = self.graph_service.create_by_category_diagram(data.by_category, name=str(year))
-        caption = format_yearly_report(data, year, scope)
-        await self.bot.send_photo(
-            callback.message.chat.id,
-            photo=BufferedInputFile(file=diagram, filename=str(uuid4())),
-            caption=caption,
-            parse_mode=ParseMode.MARKDOWN_V2,
-        )

@@ -8,7 +8,6 @@ from sqlalchemy import (
     String,
     DateTime,
     Float,
-    Numeric,
     JSON,
 )
 from sqlalchemy.orm import relationship
@@ -177,6 +176,8 @@ class StoredBudget(Base):
     category_code = Column(String, ForeignKey("category.code"))
     category = relationship("StoredCategory", lazy="subquery")
     monthly_limit = Column("monthly_limit", Float)
+    quarter_limit = Column("quarter_limit", Float)
+    year_limit = Column("year_limit", Float)
 
     def to_entity_budget(self) -> Budget:
         return Budget(
@@ -184,6 +185,8 @@ class StoredBudget(Base):
             scope=self.scope.to_entity_fill_scope(),
             category=self.category.to_entity_category(),
             monthly_limit=self.monthly_limit,
+            quarter_limit=self.quarter_limit,
+            year_limit=self.year_limit,
         )
 
     def __repr__(self) -> str:

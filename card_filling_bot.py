@@ -28,7 +28,6 @@ from handlers.report import (
     MyFillsPreviousYearCallbackHandler,
     PerMonthCurrentYearCallbackHandler,
     PerMonthPreviousYearCallbackHandler,
-    PerYearCallbackHandler,
 )
 from handlers.budget import BudgetMessageHandler
 from handlers.command import ServiceCommandMessageHandler
@@ -51,7 +50,6 @@ class CardFillingBot:
         MyFillsPreviousYearCallbackHandler,
         PerMonthCurrentYearCallbackHandler,
         PerMonthPreviousYearCallbackHandler,
-        PerYearCallbackHandler,
     ]
 
     def __init__(self, app: App) -> None:
