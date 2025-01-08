@@ -67,7 +67,6 @@ class Category:
     code: str
     name: str
     aliases: tuple[str]
-    proportion: float
     emoji_name: str
 
     def get_emoji(self) -> str:
@@ -148,13 +147,6 @@ class CategorySumOverPeriod:
 
 
 @dataclass(frozen=True)
-class ProportionOverPeriod:
-    proportion_target: Optional[float]
-    proportion_actual: Optional[float]
-
-
-@dataclass(frozen=True)
 class SummaryOverPeriod:
     by_user: tuple[UserSumOverPeriod]
     by_category: tuple[CategorySumOverPeriod]
-    proportions: Optional[ProportionOverPeriod]

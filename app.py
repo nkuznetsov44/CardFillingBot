@@ -4,7 +4,6 @@ from settings import settings
 from services.card_fill_service import CardFillService
 from services.cache_service import CacheService
 from services.graph_service import GraphService
-from services.purchase_list_service import PurchaseListService
 from entities import AppMode
 
 
@@ -18,7 +17,6 @@ class App:
         self.card_fill_service = CardFillService()
         self.cache_service = CacheService()
         self.graph_service = GraphService()
-        self.purchase_service = PurchaseListService()
 
     @classmethod
     def _init_logger(cls) -> logging.Logger:

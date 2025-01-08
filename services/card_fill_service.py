@@ -15,30 +15,11 @@ from entities import (
     User,
     UserSumOverPeriod,
     CategorySumOverPeriod,
-    ProportionOverPeriod,
     SummaryOverPeriod,
     FillScope,
     Budget,
     UserSumOverPeriodWithBalance,
 )
-
-
-def proportion_to_fraction(proportion: float) -> float:
-    """Considering total consists of two parts.
-    Proportion is the proportion of two parts.
-    Fraction is the fraction of the minor part in total.
-
-    """
-    return proportion / (1 + proportion)
-
-
-def fraction_to_proportion(fraction: float) -> float:
-    """Considering total consists of two parts.
-    Proportion is the proportion of two parts.
-    Fraction is the fraction of the minor part in total.
-
-    """
-    return fraction / (1 - fraction)
 
 
 class CardFillService:
@@ -49,9 +30,6 @@ class CardFillService:
             f"Initialized db_engine for card fill service at {settings.database_uri}"
         )
         self.DbSession = scoped_session(sessionmaker(bind=self._db_engine))
-        self.minor_proportion_user: Optional[User] = None
-        self.major_proportion_user: Optional[User] = None
-        self._init_proportion_users()
 
     @contextmanager
     def db_session(self) -> Session:
@@ -60,19 +38,6 @@ class CardFillService:
             yield db_session
         finally:
             self.DbSession.remove()
-
-    @property
-    def calc_proportions(self) -> bool:
-        return self.major_proportion_user is not None and self.minor_proportion_user is not None
-
-    def _init_proportion_users(self) -> None:
-        if self.minor_proportion_user is not None and self.major_proportion_user is not None:
-            with self.db_session() as db_session:
-                self.minor_proportion_user = db_session.query(StoredTelegramUser).get(settings.minor_proportion_user_id)
-                self.major_proportion_user = db_session.query(StoredTelegramUser).get(settings.major_proportion_user_id)
-        else:
-            self.minor_proportion_user = None
-            self.major_proportion_user = None
 
     def get_all_fills(self) -> list[Fill]:
         with self.db_session() as db_session:
@@ -154,13 +119,17 @@ class CardFillService:
         with self.db_session() as db_session:
             return [cat.to_entity_category() for cat in db_session.query(StoredCategory).all()]
 
+    def list_categories_with_budget(self, scope: FillScope) -> list[tuple[Category, Budget]]:
+        budget_cache: dict[Category, Budget] = dict()
+        categories = self.list_categories()
+        return [(category, self.get_budget_for_category(category, scope, budget_cache)) for category in categories]
+
     def create_new_category(self, category: Category) -> Category:
         with self.db_session() as db_session:
             stored_category = StoredCategory(
                 code=category.code,
                 name=category.name,
                 aliases="",
-                proportion=Decimal(f"{category.proportion:.2f}"),
                 emoji_name=category.emoji_name,
             )
             db_session.add(stored_category)
@@ -297,14 +266,6 @@ class CardFillService:
                     )
             return ret
 
-    @staticmethod
-    def _get_user_data(
-        data: list[UserSumOverPeriod], username: str
-    ) -> Optional[UserSumOverPeriod]:
-        return next(
-            filter(lambda user_data: user_data.user.username == username, data), None
-        )
-
     def get_monthly_report(
         self, months: list[Month], year: int, scope: FillScope
     ) -> dict[Month, SummaryOverPeriod]:
@@ -314,61 +275,11 @@ class CardFillService:
         for month in months:
             by_user_month = by_user[month]
             by_category_month = by_category[month]
-            proportions: Optional[ProportionOverPeriod] = None
-            if self.calc_proportions:
-                assert self.minor_proportion_user is not None
-                minor_user_data = self._get_user_data(
-                    by_user_month, self.minor_proportion_user.username
-                )
-                assert self.major_proportion_user is not None
-                major_user_data = self._get_user_data(
-                    by_user_month, self.major_proportion_user.username
-                )
-                proportion_actual_month = self._calc_proportion_actual(
-                    minor_user_data, major_user_data
-                )
-                proportion_target_month = self._calc_proportion_target(by_category_month)
-                proportions = ProportionOverPeriod(
-                    proportion_target=proportion_target_month,
-                    proportion_actual=proportion_actual_month,
-                )
             res[month] = SummaryOverPeriod(
                 by_user=by_user_month,
                 by_category=by_category_month,
-                proportions=proportions,
             )
         return res
-
-    @staticmethod
-    def _calc_proportion_actual(
-        minor_user_data: Optional[UserSumOverPeriod],
-        major_user_data: Optional[UserSumOverPeriod],
-    ) -> float:
-        """Actual proportion is a current proportion between minor and major users.
-        Thus, proportion_actual = sum for minor_user / sum for major_user"""
-        if not minor_user_data:
-            return 0.0
-        if not major_user_data or major_user_data.amount == 0.0:
-            return float("nan")
-        return minor_user_data.amount / major_user_data.amount
-
-    @staticmethod
-    def _calc_proportion_target(
-        data_by_category: list[CategorySumOverPeriod],
-    ) -> float:
-        """Target proportion is calculated from target fraction.
-        Target fraction is the target part of total expense considering target fraction for each category.
-        Thus, fraction_target = sum(category_i * fraction_i) / sum(category_i)"""
-        weighted_amount = 0.0
-        total_amount = 0.0
-        for category_data in data_by_category:
-            weighted_amount += category_data.amount * proportion_to_fraction(
-                category_data.category.proportion
-            )
-            total_amount += category_data.amount
-        if total_amount == 0.0:
-            return float("nan")
-        return fraction_to_proportion(weighted_amount / total_amount)
 
     def get_user_fills_in_months(
         self, user: User, months: list[Month], year: int, scope: FillScope
@@ -405,7 +316,7 @@ class CardFillService:
                 "from card_fill cf "
                 "join category cat on cf.category_code = cat.code "
                 f"where year(cf.fill_date) = {year} and cf.fill_scope = {scope.scope_id} "
-                "group by cat.name, cat.proportion"
+                "group by cat.code"
             )
             by_category_rows = db_session.execute(by_category_query).fetchall()
             by_category: list[CategorySumOverPeriod] = []
@@ -417,24 +328,7 @@ class CardFillService:
                     )
                 )
 
-            minor_user_data = self._get_user_data(
-                by_user, self.minor_proportion_user.username
-            )
-            major_user_data = self._get_user_data(
-                by_user, self.major_proportion_user.username
-            )
-
-            proportion_actual = self._calc_proportion_actual(
-                minor_user_data, major_user_data
-            )
-            proportion_target = self._calc_proportion_target(by_category)
-            proportions = ProportionOverPeriod(
-                proportion_actual=proportion_actual, proportion_target=proportion_target
-            )
-
-            return SummaryOverPeriod(
-                by_user=by_user, by_category=by_category, proportions=proportions
-            )
+            return SummaryOverPeriod(by_user=by_user, by_category=by_category)
 
     def get_budget_for_category(
         self,

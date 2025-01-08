@@ -4,12 +4,10 @@ from emoji import emojize
 from entities import (
     Month,
     Fill,
-    PurchaseListItem,
     User,
     FillScope,
     UserSumOverPeriod,
     CategorySumOverPeriod,
-    ProportionOverPeriod,
     SummaryOverPeriod,
     Budget,
     UserSumOverPeriodWithBalance,
@@ -131,13 +129,6 @@ def format_by_category_block(
     return "_Категории:_\n" + "\n".join(rows)
 
 
-def format_proportions_block(data: ProportionOverPeriod) -> str:
-    return (
-        f"_Пропорции:_\n  - текущая: {data.proportion_actual:.2f}\n"
-        f"  - ожидаемая: {data.proportion_target:.2f}"
-    ).replace(".", "\\.")
-
-
 def format_monthly_report(
     data: dict[Month, SummaryOverPeriod], year: int, scope: FillScope
 ) -> str:
@@ -148,8 +139,6 @@ def format_monthly_report(
         message_text += format_by_category_block(
             data_month.by_category, display_limits=True
         )
-        if scope.scope_type == "GROUP" and data_month.proportions is not None:
-            message_text += "\n\n" + format_proportions_block(data_month.proportions)
         message_text += "\n\n"
     return message_text.replace("-", "\\-").replace("(", "\\(").replace(")", "\\)")
 
@@ -172,8 +161,6 @@ def format_yearly_report(
     caption = f"*За {year} год:*\n"
     caption += format_by_user_block(data.by_user, scope) + "\n\n"
     caption += format_by_category_block(data.by_category, display_limits=False)
-    if scope.scope_type == "GROUP" and data.proportions is not None:
-        caption += "\n\n" + format_proportions_block(data.proportions)
     return caption.replace("-", "\\-")
 
 
@@ -187,12 +174,3 @@ def format_fill_confirmed(
     if budget:
         reply_text += f"\nИспользовано {current_category_usage.amount:.0f} из {current_category_usage.monthly_limit:.0f}."
     return reply_text
-
-
-def format_purchase_list(purchases: list[PurchaseListItem]) -> str:
-    message = "🛍️ Список покупок:"
-
-    for i, purchase in enumerate(purchases):
-        message += f"\n  {i}. {purchase.name}"
-
-    return message

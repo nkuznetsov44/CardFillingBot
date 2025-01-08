@@ -96,7 +96,6 @@ class StoredCategory(Base):
     code = Column("code", String, primary_key=True)
     name = Column("name", String)
     aliases = Column("aliases", String)
-    proportion = Column("proportion", Numeric)
     emoji_name = Column("emoji_name", String)
     card_fills = relationship("StoredCardFill")
 
@@ -128,14 +127,13 @@ class StoredCategory(Base):
             code=self.code,
             name=self.name,
             aliases=tuple(self.get_aliases()),
-            proportion=float(self.proportion),
             emoji_name=self.emoji_name,
         )
 
     def __repr__(self) -> str:
         return (
             f"{super().__repr__()}: "
-            f'<"code": {self.code}, "name": {self.name}, "proportion": {self.proportion}>'
+            f'<"code": {self.code}, "name": {self.name}>'
         )
 
 

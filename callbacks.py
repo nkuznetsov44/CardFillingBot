@@ -8,8 +8,6 @@ from aiogram.filters.callback_data import CallbackData
 class Callback(Enum):
     SHOW_CATEGORY = "show_category"
     DELETE_FILL = "delete_fill"
-    NEW_CATEGORY = "new_category"
-    CONFIRM_CATEGORY = "confirm_new_category"
     MY_FILLS = "my"
     MY_FILLS_PREVIOUS_YEAR = "fills_previous_year"
     MONTHLY_REPORT = "stat"

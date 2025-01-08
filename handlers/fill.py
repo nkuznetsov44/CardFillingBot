@@ -61,14 +61,6 @@ class ShowCategoryCallbackHandler(BaseCallbackHandler, callback=Callback.SHOW_CA
                     )
                 )
             keyboard_buttons.append(buttons_group)
-        keyboard_buttons.append(
-            [
-                InlineKeyboardButton(
-                    text="СОЗДАТЬ НОВУЮ КАТЕГОРИЮ",
-                    callback_data=Callback.NEW_CATEGORY.value,
-                )
-            ]
-        )
         keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
         reply_text = (
