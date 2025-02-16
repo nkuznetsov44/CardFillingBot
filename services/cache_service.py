@@ -30,13 +30,6 @@ class CacheService:
             f"Save to cache fill {fill_json} for chat {message.chat.id}, message {message.message_id}"
         )
 
-    def get_purchases_for_message(self, message: Message) -> dict[int, int]:
-        record = self.rdb.get(f"{message.chat.id}_{message.message_id}_purchase_list")
-        self.logger.debug(
-            f"Got purchases {record} for message {message.message_id}, chat {message.chat.id}"
-        )
-        return {int(key): value for key, value in json.loads(record).items()}
-
     def get_fill_for_message(self, message: Message) -> Optional[Fill]:
         fill_json = self.rdb.get(f"{message.chat.id}_{message.message_id}_fill")
         self.logger.debug(

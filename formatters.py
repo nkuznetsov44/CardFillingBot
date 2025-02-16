@@ -226,18 +226,6 @@ def format_monthly_report(
     return message_text.replace("-", "\\-").replace("(", "\\(").replace(")", "\\)").replace(".", "\\.")
 
 
-def format_monthly_report_group(
-    data: dict[Month, list[UserSumOverPeriodWithBalance]],
-    year: int,
-    scope: FillScope,
-) -> str:
-    message_text = ""
-    for month, data_month in data.items():
-        message_text += f"*{month_names[month]} {year}:*\n"
-        message_text += format_by_user_balance_block(data_month, scope) + "\n\n"
-    return message_text.replace("-", "\\-").replace("(", "\\(").replace(")", "\\)")
-
-
 def format_fill_confirmed(
     fill: Fill, budget: Optional[Budget], current_category_usage: Optional[float]
 ) -> str:

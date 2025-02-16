@@ -13,7 +13,6 @@ from formatters import (
     month_names,
     format_user_fills,
     format_monthly_report,
-    format_monthly_report_group,
 )
 from entities import User, FillScope
 from settings import settings
