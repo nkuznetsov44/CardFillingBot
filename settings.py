@@ -37,6 +37,8 @@ class _Settings:
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
         
         self.app_mode = AppMode(os.getenv("APP_MODE", "POLLING"))
+        
+        self.admin_user_id = int(os.getenv("ADMIN_USER_ID", "0"))
 
     @classmethod
     def _maybe_int(cls, val: Optional[str]) -> Optional[int]:
@@ -50,7 +52,7 @@ class _Settings:
 
     @property
     def database_uri(self) -> str:
-        if self._any_none(self.mysql_host, self.mysql_database, self.mysql_user, self.mysql_password):
+        if any(v is None for v in [self.mysql_host, self.mysql_database, self.mysql_user, self.mysql_password]):
             raise ValueError('Database settings not defined')
         return f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}" f"@{self.mysql_host}/{self.mysql_database}"
 
