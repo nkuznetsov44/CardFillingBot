@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional
 import os
 from entities import AppMode
 import argparse
@@ -28,9 +28,6 @@ class _Settings:
         self.redis_db = int(os.getenv("REDIS_DB", "0"))
         self.redis_password = os.getenv("REDIS_PASSWORD")
 
-        self.minor_proportion_user_id = self._maybe_int(os.getenv("MINOR_PROPORTION_USER_ID"))
-        self.major_proportion_user_id = self._maybe_int(os.getenv("MAJOR_PROPORTION_USER_ID"))
-
         self.webhook_host = os.getenv("WEBHOOK_HOST")
         self.webhook_path = os.getenv("WEBHOOK_PATH", "/")
 
@@ -38,12 +35,7 @@ class _Settings:
         self.webapp_port = int(os.getenv("WEBAPP_PORT", "8000"))
 
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
-
-        self.tz = os.getenv("TZ", "Europe/Moscow")
-
-        self.pay_silivri_scope_id = 5
-        self.admin_user_id = self._maybe_int(os.getenv("ADMIN_USER_ID"))
-
+        
         self.app_mode = AppMode(os.getenv("APP_MODE", "POLLING"))
 
     @classmethod

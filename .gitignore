@@ -11,3 +11,4 @@ pyvenv.cfg
 .env
 mariadb/CardFillingBot-0-dumpwithdata.sql
 mariadb/dump.sql
+.DS_Store

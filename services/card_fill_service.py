@@ -17,7 +17,6 @@ from entities import (
     SummaryOverPeriod,
     FillScope,
     Budget,
-    UserSumOverPeriodWithBalance,
     Quarter,
 )
 
@@ -106,14 +105,6 @@ class CardFillService:
             db_session.delete(fill_obj)
             db_session.commit()
             self.logger.info(f"Delete fill {fill}")
-
-    def change_date_for_fill(self, fill: Fill, dt: datetime) -> None:
-        with self.db_session() as db_session:
-            fill_obj = db_session.query(StoredCardFill).get(fill.id)
-            fill_obj.fill_date = dt
-            db_session.add(fill_obj)
-            db_session.commit()
-            self.logger.info(f"Changed date for fill {fill_obj}")
 
     def list_categories(self) -> list[Category]:
         with self.db_session() as db_session:
@@ -231,43 +222,6 @@ class CardFillService:
             for month, mdata in data.items():
                 for user, amount in mdata.items():
                     ret[month].append(UserSumOverPeriod(user=user, amount=amount))
-            return ret
-
-    def get_debt_monthly_report_by_user(
-        self, months: list[Month], year: int, scope: FillScope
-    ) -> dict[Month, list[UserSumOverPeriodWithBalance]]:
-        with self.db_session() as db_session:
-            fills: list[StoredCardFill] = (
-                db_session.query(StoredCardFill)
-                .filter(StoredCardFill.fill_scope == scope.scope_id)
-                .filter(extract("year", StoredCardFill.fill_date) == year)
-                .filter(
-                    extract("month", StoredCardFill.fill_date).in_([m.value for m in months])
-                )
-                .filter(StoredCardFill.is_netted.is_(False))
-                .all()
-            )
-
-            data: dict[Month, dict[User, float]] = defaultdict(
-                lambda: defaultdict(float)
-            )
-            for fill in fills:
-                fill_month = Month(fill.fill_date.month)
-                fill_user = fill.user.to_entity_user()
-                data[fill_month][fill_user] += fill.amount
-
-            ret: dict[Month, list[UserSumOverPeriodWithBalance]] = defaultdict(list)
-            for month, mdata in data.items():
-                month_total = sum(mdata.values())
-                num_users = len(mdata)
-                for user, amount in mdata.items():
-                    ret[month].append(
-                        UserSumOverPeriodWithBalance(
-                            user=user,
-                            amount=amount,
-                            balance=(amount - month_total / num_users),
-                        )
-                    )
             return ret
 
     def get_monthly_report(

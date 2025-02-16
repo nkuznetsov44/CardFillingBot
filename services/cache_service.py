@@ -4,7 +4,7 @@ from typing import Optional, Any
 import redis
 from aiogram.types import Message
 from settings import settings
-from entities import Fill, Category, Month, PurchaseListItem
+from entities import Fill, Category, Month
 from schemas import FillSchema, CategorySchema
 
 
@@ -23,13 +23,11 @@ class CacheService:
             f"Initialized redis connection for cache service at {settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
         )
 
-    def set_purchases_for_message(
-        self, message: Message, purchases: list[PurchaseListItem]
-    ) -> None:
-        record = json.dumps({i: purchase.id for i, purchase in enumerate(purchases)})
-        self.rdb.set(f"{message.chat.id}_{message.message_id}_purchase_list", record)
+    def set_fill_for_message(self, message: Message, fill: Fill) -> None:
+        fill_json = FillSchema().dumps(fill)
+        self.rdb.set(f"{message.chat.id}_{message.message_id}_fill", fill_json)
         self.logger.debug(
-            f"Save purchase list {record} for chat {message.chat.id}, message {message.message_id}"
+            f"Save to cache fill {fill_json} for chat {message.chat.id}, message {message.message_id}"
         )
 
     def get_purchases_for_message(self, message: Message) -> dict[int, int]:
@@ -38,13 +36,6 @@ class CacheService:
             f"Got purchases {record} for message {message.message_id}, chat {message.chat.id}"
         )
         return {int(key): value for key, value in json.loads(record).items()}
-
-    def set_fill_for_message(self, message: Message, fill: Fill) -> None:
-        fill_json = FillSchema().dumps(fill)
-        self.rdb.set(f"{message.chat.id}_{message.message_id}_fill", fill_json)
-        self.logger.debug(
-            f"Save to cache fill {fill_json} for chat {message.chat.id}, message {message.message_id}"
-        )
 
     def get_fill_for_message(self, message: Message) -> Optional[Fill]:
         fill_json = self.rdb.get(f"{message.chat.id}_{message.message_id}_fill")
