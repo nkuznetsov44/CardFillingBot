@@ -268,12 +268,12 @@ class CardFillService:
 
     def list_budgets(self, scope: FillScope) -> list[Budget]:
         with self.db_session() as db_session:
-            budgets: list[StoredBudget] = (
+            stored_budgets = (
                 db_session.query(StoredBudget)
                 .filter(StoredBudget.fill_scope == scope.scope_id)
                 .all()
             )
-            return [sb.to_entity_budget() for sb in budgets]
+            return [b.to_entity_budget() for b in stored_budgets]
 
     def get_current_budget_usage_for_category(
         self, category: Category, scope: FillScope
@@ -302,3 +302,63 @@ class CardFillService:
                 fill.is_netted = True
                 db_session.add(fill)
             db_session.commit()
+
+    def get_budget(self, category: Category, scope: FillScope) -> Optional[Budget]:
+        with self.db_session() as db_session:
+            stored_budget = (
+                db_session.query(StoredBudget)
+                .filter(StoredBudget.category_code == category.code)
+                .filter(StoredBudget.fill_scope == scope.scope_id)
+                .one_or_none()
+            )
+            return stored_budget.to_entity_budget() if stored_budget else None
+
+    def update_budget(
+        self, 
+        category: Category, 
+        scope: FillScope, 
+        amount: float, 
+        period_type: str
+    ) -> Budget:
+        with self.db_session() as db_session:
+            stored_budget = (
+                db_session.query(StoredBudget)
+                .filter(StoredBudget.category_code == category.code)
+                .filter(StoredBudget.fill_scope == scope.scope_id)
+                .one_or_none()
+            )
+            
+            if stored_budget:
+                # Reset all limits to null first
+                stored_budget.monthly_limit = None
+                stored_budget.quarter_limit = None
+                stored_budget.year_limit = None
+                
+                # Set only the requested limit
+                if period_type == "MONTH":
+                    stored_budget.monthly_limit = amount
+                elif period_type == "QUARTER":
+                    stored_budget.quarter_limit = amount
+                elif period_type == "YEAR":
+                    stored_budget.year_limit = amount
+            else:
+                # Create new budget with only one limit set
+                kwargs = {
+                    "category_code": category.code,
+                    "fill_scope": scope.scope_id,
+                    "monthly_limit": amount if period_type == "MONTH" else None,
+                    "quarter_limit": amount if period_type == "QUARTER" else None,
+                    "year_limit": amount if period_type == "YEAR" else None
+                }
+                stored_budget = StoredBudget(**kwargs)
+                db_session.add(stored_budget)
+            
+            db_session.commit()
+            return stored_budget.to_entity_budget()
+
+    def get_category(self, category_code: str) -> Category:
+        categories = self.list_categories()
+        for category in categories:
+            if category.code == category_code:
+                return category
+        raise ValueError(f"Category with code {category_code} not found")

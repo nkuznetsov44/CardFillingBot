@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 import os
 from entities import AppMode
 import argparse
