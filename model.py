@@ -12,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from entities import FillScope, Category, User, Fill, Budget, PurchaseListItem, CurrencyRate, Currency
+from entities import FillScope, Category, User, Fill, Budget, CurrencyRate, Currency
 
 
 Base = declarative_base()
@@ -194,22 +194,4 @@ class StoredBudget(Base):
             f"{super().__repr__()}: "
             f'<"id": {self.id}, "fill_scope":{self.fill_scope}, '
             f'"category_code": {self.category_code}, "monthly_limit": {self.monthly_limit}>'
-        )
-
-
-class StoredPurchaselistItem(Base):
-    __tablename__ = "purchase"
-
-    id = Column("id", Integer, primary_key=True)
-    fill_scope = Column(Integer, ForeignKey("fill_scope.scope_id"))
-    scope = relationship("StoredFillScope", lazy="subquery")
-    name = Column(String)
-    is_active = Column(Boolean, default=True)
-
-    def to_entity_purchase_list_item(self) -> PurchaseListItem:
-        return PurchaseListItem(
-            id=self.id,
-            scope=self.scope,
-            name=self.name,
-            is_active=self.is_active,
         )

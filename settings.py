@@ -28,9 +28,6 @@ class _Settings:
         self.redis_db = int(os.getenv("REDIS_DB", "0"))
         self.redis_password = os.getenv("REDIS_PASSWORD")
 
-        self.minor_proportion_user_id = self._maybe_int(os.getenv("MINOR_PROPORTION_USER_ID"))
-        self.major_proportion_user_id = self._maybe_int(os.getenv("MAJOR_PROPORTION_USER_ID"))
-
         self.webhook_host = os.getenv("WEBHOOK_HOST")
         self.webhook_path = os.getenv("WEBHOOK_PATH", "/")
 
@@ -38,13 +35,10 @@ class _Settings:
         self.webapp_port = int(os.getenv("WEBAPP_PORT", "8000"))
 
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
-
-        self.tz = os.getenv("TZ", "Europe/Moscow")
-
-        self.pay_silivri_scope_id = 5
-        self.admin_user_id = self._maybe_int(os.getenv("ADMIN_USER_ID"))
-
+        
         self.app_mode = AppMode(os.getenv("APP_MODE", "POLLING"))
+        
+        self.admin_user_id = int(os.getenv("ADMIN_USER_ID", "0"))
 
     @classmethod
     def _maybe_int(cls, val: Optional[str]) -> Optional[int]:
@@ -58,7 +52,7 @@ class _Settings:
 
     @property
     def database_uri(self) -> str:
-        if self._any_none(self.mysql_host, self.mysql_database, self.mysql_user, self.mysql_password):
+        if any(v is None for v in [self.mysql_host, self.mysql_database, self.mysql_user, self.mysql_password]):
             raise ValueError('Database settings not defined')
         return f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}" f"@{self.mysql_host}/{self.mysql_database}"
 

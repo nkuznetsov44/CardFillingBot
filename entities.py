@@ -143,14 +143,6 @@ class Budget:
 
 
 @dataclass(frozen=True)
-class PurchaseListItem:
-    id: int
-    scope: FillScope
-    name: str
-    is_active: Optional[bool] = None
-
-
-@dataclass(frozen=True)
 class UserSumOverPeriod:
     user: User
     amount: float

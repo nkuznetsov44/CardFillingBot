@@ -1,23 +1,37 @@
-from typing import Optional, Type
-from aiogram.types import Message
+import logging
+from typing import Type, Optional, Any
+from aiogram import Bot
+from aiogram.types import Message, CallbackQuery
+
+from app import App
+from handlers.base import BaseMessageHandler, BaseCallbackHandler
+from handlers.command import ServiceCommandMessageHandler
+from handlers.fill import FillMessageHandler
+from handlers.budget import (
+    BudgetCommandHandler,
+    EditBudgetCallbackHandler,
+    BudgetMessageHandler,
+    BudgetPeriodCallbackHandler,
+    BudgetConfirmCallbackHandler
+)
+from parsers.command import ServiceCommandMessage
+from parsers.fill import FillMessage
+from parsers.month import MonthMessage
+from parsers.budget import BudgetMessage
+from services.state_service import BudgetEditState
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 import asyncio
 
-from app import App
 from parsers import MessageParser, ParsedMessage
-from parsers.month import MonthMessage, MonthMessageParser
+from parsers.month import MonthMessageParser
 from parsers.fill import (
-    FillMessage,
     FillMessageParser,
     NetBalancesMessage,
     NetBalancesMessageParser,
 )
-from parsers.budget import BudgetMessage, BudgetMessageParser
-from parsers.command import ServiceCommandMessage, ServiceCommandMessageParser
-from handlers.base import BaseMessageHandler, BaseCallbackHandler
+from parsers.budget import BudgetMessageParser
+from parsers.command import ServiceCommandMessageParser
 from handlers.fill import (
-    FillMessageHandler,
-    NetBalancesMessageHandler,
     ShowCategoryCallbackHandler,
     ChangeCategoryCallbackHandler,
     DeleteFillCallbackHandler,
@@ -29,17 +43,14 @@ from handlers.report import (
     PerMonthCurrentYearCallbackHandler,
     PerMonthPreviousYearCallbackHandler,
 )
-from handlers.budget import BudgetMessageHandler
-from handlers.command import ServiceCommandMessageHandler
 
 
 class CardFillingBot:
-    message_handlers: dict[ParsedMessage, Type[BaseMessageHandler]] = {
+    message_handlers: dict[type, Type[BaseMessageHandler]] = {
+        ServiceCommandMessage: ServiceCommandMessageHandler,
         FillMessage: FillMessageHandler,
         MonthMessage: MonthsMessageHandler,
-        NetBalancesMessage: NetBalancesMessageHandler,
-        ServiceCommandMessage: ServiceCommandMessageHandler,
-        BudgetMessage: BudgetMessageHandler,
+        BudgetMessage: BudgetCommandHandler
     }
 
     callback_handlers: list[Type[BaseCallbackHandler]] = [
@@ -50,6 +61,9 @@ class CardFillingBot:
         MyFillsPreviousYearCallbackHandler,
         PerMonthCurrentYearCallbackHandler,
         PerMonthPreviousYearCallbackHandler,
+        EditBudgetCallbackHandler,
+        BudgetPeriodCallbackHandler,
+        BudgetConfirmCallbackHandler,
     ]
 
     def __init__(self, app: App) -> None:
@@ -101,6 +115,13 @@ class CardFillingBot:
         )
 
     async def message_handler(self, message: Message) -> None:
+        # Check if we're in budget editing process
+        state = self.app.state_service.get_budget_edit_state(message.chat.id)
+        if state and state[0] == BudgetEditState.WAITING_FOR_AMOUNT:
+            handler = BudgetMessageHandler(self.app)
+            await handler.handle(message)
+            return
+            
         self.logger.info(f"Received message {message.text}")
         for parser in self.message_parsers:
             parsed_message: Optional[ParsedMessage] = None
@@ -113,7 +134,7 @@ class CardFillingBot:
                 self.logger.info(f"Handling message {parsed_message}")
                 handler_cls = self.message_handlers[type(parsed_message)]
                 try:
-                    await handler_cls(app).handle(parsed_message)
+                    await handler_cls(self.app).handle(parsed_message)
                 except:
                     self.logger.exception(f"Handler {handler_cls} failed")
                     await self.error_handler(message)

@@ -13,7 +13,6 @@ from formatters import (
     month_names,
     format_user_fills,
     format_monthly_report,
-    format_monthly_report_group,
 )
 from entities import User, FillScope
 from settings import settings
@@ -63,39 +62,9 @@ class MyFillsPreviousYearCallbackHandler(BaseCallbackHandler, callback=Callback.
 
 class PerMonthCurrentYearCallbackHandler(BaseCallbackHandler, callback=Callback.MONTHLY_REPORT):
     async def handle(self, callback: CallbackQuery, callback_data: Any | None = None) -> None:
+        months = self.cache_service.get_months_for_message(callback.message)
+        year = datetime.now().year
         scope = self.card_fill_service.get_scope(callback.message.chat.id)
-        if scope.scope_id == settings.pay_silivri_scope_id:
-            return await self._per_month_silivri(callback, scope)
-        return await self._per_month_default(callback, scope)
-
-    async def _per_month_silivri(self, callback: CallbackQuery, scope: FillScope) -> None:
-        months = self.cache_service.get_months_for_message(callback.message)
-        year = datetime.now().year
-        data = self.card_fill_service.get_debt_monthly_report_by_user(months, year, scope)
-
-        message_text = format_monthly_report_group(data, year, scope)
-        if len(months) == 1:
-            month = months[0]
-            diagram = self.graph_service.create_by_user_diagram(
-                data[month], name=f"{month_names[month]} {year}"
-            )
-            if diagram:
-                await self.bot.send_photo(
-                    callback.message.chat.id,
-                    photo=BufferedInputFile(file=diagram, filename=str(uuid4())),
-                    caption=message_text,
-                    parse_mode=ParseMode.MARKDOWN_V2,
-                )
-            else:
-                await self.bot.send_message(
-                    chat_id=callback.message.chat.id,
-                    text=message_text,
-                    parse_mode=ParseMode.MARKDOWN_V2,
-                )
-
-    async def _per_month_default(self, callback: CallbackQuery, scope: FillScope) -> None:
-        months = self.cache_service.get_months_for_message(callback.message)
-        year = datetime.now().year
         data = self.card_fill_service.get_monthly_report(months, year, scope)
 
         message_text = format_monthly_report(data, year, scope)

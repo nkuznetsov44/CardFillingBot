@@ -4,7 +4,7 @@ from typing import Optional, Any
 import redis
 from aiogram.types import Message
 from settings import settings
-from entities import Fill, Category, Month, PurchaseListItem
+from entities import Fill, Category, Month
 from schemas import FillSchema, CategorySchema
 
 
@@ -22,22 +22,6 @@ class CacheService:
         self.logger.info(
             f"Initialized redis connection for cache service at {settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
         )
-
-    def set_purchases_for_message(
-        self, message: Message, purchases: list[PurchaseListItem]
-    ) -> None:
-        record = json.dumps({i: purchase.id for i, purchase in enumerate(purchases)})
-        self.rdb.set(f"{message.chat.id}_{message.message_id}_purchase_list", record)
-        self.logger.debug(
-            f"Save purchase list {record} for chat {message.chat.id}, message {message.message_id}"
-        )
-
-    def get_purchases_for_message(self, message: Message) -> dict[int, int]:
-        record = self.rdb.get(f"{message.chat.id}_{message.message_id}_purchase_list")
-        self.logger.debug(
-            f"Got purchases {record} for message {message.message_id}, chat {message.chat.id}"
-        )
-        return {int(key): value for key, value in json.loads(record).items()}
 
     def set_fill_for_message(self, message: Message, fill: Fill) -> None:
         fill_json = FillSchema().dumps(fill)
@@ -91,20 +75,3 @@ class CacheService:
         if not category_json:
             return None
         return CategorySchema().loads(category_json)
-
-    def set_context_for_message(
-        self, message: Message, context: dict[str, Any]
-    ) -> None:
-        context_str = json.dumps(context)
-        self.rdb.set(f"{message.chat.id}_{message.message_id}_context", context_str)
-        self.logger.debug(
-            f"Save to cache context {context_str} for message for "
-            f"chat {message.chat.id}, message {message.message_id}"
-        )
-
-    def get_context_for_message(self, message: Message) -> Optional[dict[str, Any]]:
-        context_str = self.rdb.get(f"{message.chat.id}_{message.message_id}_context")
-        self.logger.debug(
-            f"Get from cache context {context_str} for for chat {message.chat.id}, message {message.message_id}"
-        )
-        return json.loads(context_str)
