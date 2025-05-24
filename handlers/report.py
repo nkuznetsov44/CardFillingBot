@@ -14,6 +14,7 @@ from formatters import (
     format_user_fills,
     format_monthly_report,
     format_monthly_report_group,
+    format_user_income,
 )
 from entities import User, FillScope
 from settings import settings
@@ -97,8 +98,9 @@ class PerMonthCurrentYearCallbackHandler(BaseCallbackHandler, callback=Callback.
         months = self.cache_service.get_months_for_message(callback.message)
         year = datetime.now().year
         data = self.card_fill_service.get_monthly_report(months, year, scope)
+        income_data = self.card_fill_service.get_income_monthly_report_by_user(months, year, scope)
 
-        message_text = format_monthly_report(data, year, scope)
+        message_text = format_monthly_report(data, year, scope, income_data)
         previous_year = InlineKeyboardButton(
             text="Предыдущий год", callback_data=Callback.MONTHLY_REPORT_PREVIOUS_YEAR.value
         )
@@ -135,8 +137,9 @@ class PerMonthPreviousYearCallbackHandler(BaseCallbackHandler, callback=Callback
         previous_year = datetime.now().year - 1
         scope = self.card_fill_service.get_scope(callback.message.chat.id)
         data = self.card_fill_service.get_monthly_report(months, previous_year, scope)
+        income_data = self.card_fill_service.get_income_monthly_report_by_user(months, previous_year, scope)
 
-        message_text = format_monthly_report(data, previous_year, scope)
+        message_text = format_monthly_report(data, previous_year, scope, income_data)
         if len(months) == 1:
             month = months[0]
             diagram = self.graph_service.create_by_category_diagram(
@@ -158,3 +161,20 @@ class PerMonthPreviousYearCallbackHandler(BaseCallbackHandler, callback=Callback
             parse_mode=ParseMode.MARKDOWN_V2,
         )
         self.cache_service.set_months_for_message(sent_message, months)
+
+
+class MyIncomeCurrentYearCallbackHandler(BaseCallbackHandler, callback=Callback.MY_INCOME):
+    async def handle(self, callback: CallbackQuery, callback_data: Any | None = None) -> None:
+        months = self.cache_service.get_months_for_message(callback.message)
+        year = datetime.now().year
+        from_user = User.from_telegramapi(callback.from_user)
+        scope = self.card_fill_service.get_scope(callback.message.chat.id)
+        incomes = self.card_fill_service.get_user_income_in_months(from_user, months, year, scope)
+
+        message_text = format_user_income(incomes, from_user, months, year, scope)
+        await self.bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=message_text,
+            parse_mode=ParseMode.MARKDOWN_V2,
+        )

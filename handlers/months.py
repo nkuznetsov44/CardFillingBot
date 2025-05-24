@@ -9,10 +9,11 @@ class MonthsMessageHandler(BaseMessageHandler[MonthMessage]):
     async def handle(self, message: MonthMessage) -> None:
         months = message.data
         my = InlineKeyboardButton(text="Мои затраты", callback_data=Callback.MY_FILLS.value)
+        my_income = InlineKeyboardButton(text="Мои доходы", callback_data=Callback.MY_INCOME.value)
         stat = InlineKeyboardButton(
             text="Отчет за месяцы", callback_data=Callback.MONTHLY_REPORT.value
         )
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[[my], [stat]])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[my], [my_income], [stat]])
         sent_message = await self.bot.send_message(
             chat_id=message.original_message.chat.id,
             text=f'Выбраны месяцы: {", ".join(map(month_names.get, months))}. Какая информация интересует?',
