@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, extract
 from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from settings import settings
-from model import StoredCardFill, StoredCategory, StoredTelegramUser, StoredFillScope, StoredBudget, StoredCurrencyRate
+from model import StoredCardFill, StoredCategory, StoredTelegramUser, StoredFillScope, StoredBudget, StoredCurrencyRate, StoredIncome
 from entities import (
     Month,
     Fill,
@@ -19,6 +19,7 @@ from entities import (
     Budget,
     UserSumOverPeriodWithBalance,
     Quarter,
+    Income,
 )
 
 
@@ -338,13 +339,107 @@ class CardFillService:
 
     def net_balances(self, scope: FillScope) -> None:
         with self.db_session() as db_session:
-            fills: list[StoredCardFill] = (
+            fills = (
                 db_session.query(StoredCardFill)
-                .filter(StoredCardFill.fill_scope == scope.scope_id)
-                .filter(StoredCardFill.is_netted.is_(False))
+                .filter(StoredCardFill.fill_scope.in_(self._get_scope_id_filter(scope)))
+                .filter(StoredCardFill.is_netted == False)
                 .all()
             )
             for fill in fills:
                 fill.is_netted = True
                 db_session.add(fill)
             db_session.commit()
+            self.logger.info(f"Net {len(fills)} balances for scope {scope.scope_id}")
+
+    def handle_new_income(self, income: Income) -> Income:
+        with self.db_session() as db_session:
+            user = db_session.query(StoredTelegramUser).get(income.user.id)
+            if not user:
+                new_user = StoredTelegramUser(
+                    user_id=income.user.id,
+                    is_bot=income.user.is_bot,
+                    first_name=income.user.first_name,
+                    last_name=income.user.last_name,
+                    username=income.user.username,
+                    language_code=income.user.language_code,
+                )
+                db_session.add(new_user)
+                user = new_user
+                self.logger.info(f"Create new user {user}")
+
+            # Store original amount and currency for reference
+            original_amount = income.amount
+            original_currency = income.currency
+
+            # Convert to base currency if needed
+            if income.currency:
+                currency_rate = db_session.query(StoredCurrencyRate).get(income.currency.value)
+                if currency_rate:
+                    income.amount = income.amount * currency_rate.rate
+
+            stored_income = StoredIncome(
+                user_id=user.user_id,
+                income_date=income.income_date,
+                amount=income.amount,
+                description=income.description,
+                fill_scope=income.scope.scope_id,
+                currency=income.currency.value if income.currency else None,
+                original_amount=original_amount,
+                original_currency=original_currency.value if original_currency else None,
+            )
+
+            db_session.add(stored_income)
+            db_session.commit()
+            income.id = stored_income.income_id
+            income.original_amount = original_amount
+            income.original_currency = original_currency
+            self.logger.info(f"Save income {income}")
+            return income
+
+    def delete_income(self, income: Income) -> None:
+        with self.db_session() as db_session:
+            income_obj = db_session.query(StoredIncome).get(income.id)
+            db_session.delete(income_obj)
+            db_session.commit()
+            self.logger.info(f"Delete income {income}")
+
+    def get_user_income_in_months(
+        self, user: User, months: list[Month], year: int, scope: FillScope
+    ) -> list[Income]:
+        with self.db_session() as db_session:
+            incomes = (
+                db_session.query(StoredIncome)
+                .filter(StoredIncome.user_id == user.id)
+                .filter(StoredIncome.fill_scope.in_(self._get_scope_id_filter(scope)))
+                .filter(extract("year", StoredIncome.income_date) == year)
+                .filter(extract("month", StoredIncome.income_date).in_([m.value for m in months]))
+                .all()
+            )
+            return [income.to_entity_income() for income in incomes]
+
+    def get_income_monthly_report_by_user(
+        self, months: list[Month], year: int, scope: FillScope
+    ) -> dict[Month, list[UserSumOverPeriod]]:
+        with self.db_session() as db_session:
+            incomes: list[StoredIncome] = (
+                db_session.query(StoredIncome)
+                .filter(StoredIncome.fill_scope.in_(self._get_scope_id_filter(scope)))
+                .filter(extract("year", StoredIncome.income_date) == year)
+                .all()
+            )
+
+            monthly_data: dict[Month, dict[User, float]] = defaultdict(lambda: defaultdict(float))
+            all_users = set()
+            for income in incomes:
+                income_month = Month(income.income_date.month)
+                user = income.user.to_entity_user()
+                monthly_data[income_month][user] += income.amount
+                all_users.add(user)
+
+            ret: dict[Month, list[UserSumOverPeriod]] = defaultdict(list)
+            for month in months:
+                for user in all_users:
+                    amount = monthly_data[month].get(user, 0)
+                    if amount > 0:  # Only include users with income in this month
+                        ret[month].append(UserSumOverPeriod(user=user, amount=amount))
+            return ret

@@ -12,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from entities import FillScope, Category, User, Fill, Budget, PurchaseListItem, CurrencyRate, Currency
+from entities import FillScope, Category, User, Fill, Budget, PurchaseListItem, CurrencyRate, Currency, Income
 
 
 Base = declarative_base()
@@ -68,6 +68,7 @@ class StoredTelegramUser(Base):
     username = Column("username", String, nullable=True)
     language_code = Column("language_code", String, nullable=True)
     card_fills = relationship("StoredCardFill")
+    incomes = relationship("StoredIncome")
 
     def to_entity_user(self) -> User:
         return User(
@@ -198,7 +199,7 @@ class StoredBudget(Base):
 
 
 class StoredPurchaselistItem(Base):
-    __tablename__ = "purchase"
+    __tablename__ = "purchase_list"
 
     id = Column("id", Integer, primary_key=True)
     fill_scope = Column(Integer, ForeignKey("fill_scope.scope_id"))
@@ -209,7 +210,48 @@ class StoredPurchaselistItem(Base):
     def to_entity_purchase_list_item(self) -> PurchaseListItem:
         return PurchaseListItem(
             id=self.id,
-            scope=self.scope,
+            scope=self.scope.to_entity_fill_scope(),
             name=self.name,
             is_active=self.is_active,
+        )
+
+    def __repr__(self) -> str:
+        return f"{super().__repr__()}: " f'<"id": {self.id}, "name": {self.name}>'
+
+
+class StoredIncome(Base):
+    __tablename__ = "income"
+
+    income_id = Column("income_id", Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("telegram_user.user_id"))
+    user = relationship("StoredTelegramUser", back_populates="incomes")
+    income_date = Column("income_date", DateTime)
+    amount = Column("amount", Float)
+    description = Column("description", String, nullable=True)
+    fill_scope = Column(Integer, ForeignKey("fill_scope.scope_id"))
+    scope = relationship("StoredFillScope", lazy="subquery")
+    currency = Column("currency", String)
+    original_amount = Column("original_amount", Float, nullable=True)
+    original_currency = Column("original_currency", String, nullable=True)
+
+    def to_entity_income(self) -> Income:
+        return Income(
+            id=self.income_id,
+            user=self.user.to_entity_user(),
+            income_date=self.income_date,
+            amount=self.amount,
+            description=self.description,
+            scope=self.scope.to_entity_fill_scope(),
+            currency=Currency(self.currency) if self.currency else None,
+            original_amount=self.original_amount,
+            original_currency=Currency(self.original_currency) if self.original_currency else None,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"{super().__repr__()}: "
+            f'<"income_id": {self.income_id}, "user": {self.user}, '
+            f'"income_date": {self.income_date}, "amount": {self.amount}, '
+            f'"description": {self.description}, "scope": {self.scope},'
+            f'"currency: {self.currency}>'
         )

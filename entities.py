@@ -132,6 +132,19 @@ class Fill:
     currency: Optional[Currency] = None
 
 
+@dataclass
+class Income:
+    id: Optional[int]
+    user: User
+    income_date: datetime
+    amount: float
+    description: Optional[str]
+    scope: FillScope
+    currency: Optional[Currency] = None
+    original_amount: Optional[float] = None
+    original_currency: Optional[Currency] = None
+
+
 @dataclass(frozen=True)
 class Budget:
     id: int

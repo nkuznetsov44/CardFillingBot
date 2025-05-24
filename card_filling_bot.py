@@ -28,14 +28,18 @@ from handlers.report import (
     MyFillsPreviousYearCallbackHandler,
     PerMonthCurrentYearCallbackHandler,
     PerMonthPreviousYearCallbackHandler,
+    MyIncomeCurrentYearCallbackHandler,
 )
 from handlers.budget import BudgetMessageHandler
 from handlers.command import ServiceCommandMessageHandler
+from parsers.income import IncomeMessage, IncomeMessageParser
+from handlers.income import IncomeMessageHandler, DeleteIncomeCallbackHandler
 
 
 class CardFillingBot:
     message_handlers: dict[ParsedMessage, Type[BaseMessageHandler]] = {
         FillMessage: FillMessageHandler,
+        IncomeMessage: IncomeMessageHandler,
         MonthMessage: MonthsMessageHandler,
         NetBalancesMessage: NetBalancesMessageHandler,
         ServiceCommandMessage: ServiceCommandMessageHandler,
@@ -46,7 +50,9 @@ class CardFillingBot:
         ShowCategoryCallbackHandler,
         ChangeCategoryCallbackHandler,
         DeleteFillCallbackHandler,
+        DeleteIncomeCallbackHandler,
         MyFillsCurrentYearCallbackHandler,
+        MyIncomeCurrentYearCallbackHandler,
         MyFillsPreviousYearCallbackHandler,
         PerMonthCurrentYearCallbackHandler,
         PerMonthPreviousYearCallbackHandler,
@@ -73,6 +79,7 @@ class CardFillingBot:
     @classmethod
     def _init_message_parsers(cls, app: App) -> list[MessageParser]:
         return [
+            IncomeMessageParser(app.card_fill_service),
             FillMessageParser(app.card_fill_service),
             MonthMessageParser(),
             NetBalancesMessageParser(app.card_fill_service),

@@ -12,6 +12,7 @@ from entities import (
     SummaryOverPeriod,
     Budget,
     UserSumOverPeriodWithBalance,
+    Income,
 )
 
 
@@ -42,6 +43,13 @@ def get_max_table_desc_width(scope_type: str):
     if scope_type == "PRIVATE":
         return 17
     return 13
+
+
+def get_max_income_table_desc_width(scope_type: str):
+    """Get description column width for income tables, accounting for wider amount column"""
+    if scope_type == "PRIVATE":
+        return 15  # 17 - 2 (7-5 difference in amount column width)
+    return 11      # 13 - 2 (7-5 difference in amount column width)
 
 
 def format_fills_list_as_table(fills: list[Fill], scope: FillScope) -> str:
@@ -215,11 +223,22 @@ def format_by_category_block(data: list[CategorySumOverPeriod]) -> str:
 
 
 def format_monthly_report(
-    data: dict[Month, SummaryOverPeriod], year: int, scope: FillScope
+    data: dict[Month, SummaryOverPeriod], 
+    year: int, 
+    scope: FillScope,
+    income_data: Optional[dict[Month, list[UserSumOverPeriod]]] = None
 ) -> str:
     message_text = ""
     for month, data_month in data.items():
         message_text += f"*{month_names[month]} {year}:*\n"
+        
+        # Add income section if available
+        if income_data and month in income_data and income_data[month]:
+            message_text += "*Доходы:*\n"
+            message_text += format_by_user_income_block(income_data[month], scope) + "\n\n"
+        
+        # Add expenses section
+        message_text += "*Расходы:*\n"
         message_text += format_by_user_block(data_month.by_user, scope) + "\n\n"
         message_text += format_by_category_block(data_month.by_category)
         message_text += "\n\n"
@@ -251,3 +270,74 @@ def format_fill_confirmed(
         if limit:
             reply_text += f"\nИспользовано {current_category_usage.amount:.0f} из {limit:.0f}."
     return reply_text
+
+
+def format_income_confirmed(income: Income) -> str:
+    reply_text = f"Доход {income.amount} {BASE_CURRENCY_ALIAS}. от @{income.user.username}"
+    if income.description:
+        reply_text += f": {income.description}"
+    
+    # Show original currency if different from base
+    if income.original_currency and income.original_amount != income.amount:
+        reply_text += f"\n(Оригинал: {income.original_amount} {income.original_currency.value})"
+    
+    return reply_text
+
+
+def format_income_list_as_table(incomes: list[Income], scope: FillScope) -> str:
+    tbl = prettytable.PrettyTable()
+    tbl._max_width = {
+        "Дата": 5,
+        "Сумма": 7,
+        "Описание": get_max_income_table_desc_width(scope.scope_type),
+    }
+    tbl.border = False
+    tbl.hrules = prettytable.HEADER
+    tbl.left_padding_width = 0
+    tbl.right_padding_width = 1
+    tbl.field_names = ["Дата", "Сумма", "Описание"]
+    tbl.align["Дата"] = "r"
+    tbl.align["Сумма"] = "r"
+    tbl.align["Описание"] = "l"
+    for income in incomes:
+        tbl.add_row(
+            [
+                income.income_date.strftime("%d/%m"),
+                f"{income.amount:.0f}",
+                income.description or "",
+            ]
+        )
+    return tbl.get_string()
+
+
+def format_user_income(
+    incomes: list[Income],
+    from_user: User,
+    months: list[Month],
+    year: int,
+    scope: FillScope,
+) -> str:
+    m_names = ", ".join(map(month_names.get, months))
+    if len(incomes) == 0:
+        text = f"Не было доходов в {m_names} {year}."
+    else:
+        income_table = format_income_list_as_table(incomes, scope)
+        text = (
+            f"Доходы @{from_user.username} за {m_names} {year}:\n"
+            + "```"
+            + income_table
+            + "```"
+        )
+    text = text.replace("-", "\\-").replace("_", "\\_").replace(".", "\\.")
+    return text
+
+
+def format_by_user_income_block(data: list[UserSumOverPeriod], scope: FillScope) -> str:
+    if scope.scope_type == "PRIVATE":
+        return "\n".join([f"{user_sum.amount:.0f}" for user_sum in data])
+    else:
+        result = "\n".join(
+            [f"@{user_sum.user.username}: {user_sum.amount:.0f}" for user_sum in data]
+        )
+        result += f"\nВсего доходов: {sum(user_sum.amount for user_sum in data):.0f}"
+        return result.replace("_", "\\_")

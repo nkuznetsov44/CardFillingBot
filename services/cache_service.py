@@ -4,8 +4,8 @@ from typing import Optional, Any
 import redis
 from aiogram.types import Message
 from settings import settings
-from entities import Fill, Category, Month, PurchaseListItem
-from schemas import FillSchema, CategorySchema
+from entities import Fill, Category, Month, PurchaseListItem, Income
+from schemas import FillSchema, CategorySchema, IncomeSchema
 
 
 class CacheService:
@@ -108,3 +108,19 @@ class CacheService:
             f"Get from cache context {context_str} for for chat {message.chat.id}, message {message.message_id}"
         )
         return json.loads(context_str)
+
+    def set_income_for_message(self, message: Message, income: Income) -> None:
+        income_json = IncomeSchema().dumps(income)
+        self.rdb.set(f"{message.chat.id}_{message.message_id}_income", income_json)
+        self.logger.debug(
+            f"Save to cache income {income_json} for chat {message.chat.id}, message {message.message_id}"
+        )
+
+    def get_income_for_message(self, message: Message) -> Optional[Income]:
+        income_json = self.rdb.get(f"{message.chat.id}_{message.message_id}_income")
+        self.logger.debug(
+            f"Get from cache income {income_json} for chat {message.chat.id}, message {message.message_id}"
+        )
+        if not income_json:
+            return None
+        return IncomeSchema().loads(income_json)

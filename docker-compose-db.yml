@@ -7,6 +7,7 @@ services:
     volumes:
       - ./mariadb/dump.sql:/docker-entrypoint-initdb.d/CardFillingBot-0-dumpwithdata.sql
       - ./mariadb/CardFillingBot-4-testingscope.sql:/docker-entrypoint-initdb.d/CardFillingBot-4-testingscope.sql
+      - ./mariadb/create_income_table.sql:/docker-entrypoint-initdb.d/CardFillingBot-5-create_income_table.sql
     environment:
       - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
       - MYSQL_USER=${MYSQL_USER}
