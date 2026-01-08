@@ -1,5 +1,6 @@
 from collections import defaultdict
 import logging
+from calendar import monthrange
 from contextlib import contextmanager
 from typing import Optional
 from datetime import datetime
@@ -177,9 +178,9 @@ class CardFillService:
                 year_data[fill_category] += fill.amount
 
             ret: dict[Month, list[CategorySumOverPeriod]] = defaultdict(list)
-            budgets = {budget.category.code: budget for budget in self.list_budgets(scope)}
             categories = year_data.keys()
             for month in months:
+                budgets = self._get_active_budgets_for_period(scope, year, month)
                 quarter = Quarter.from_month(month)
                 mdata = monthly_data[month]
                 qdata = quarter_data[quarter]
@@ -205,6 +206,23 @@ class CardFillService:
         if scope.report_scopes:
             return scope.report_scopes
         return [scope.scope_id]
+
+    def _get_active_budgets_for_period(self, scope: FillScope, year: int, month: Month) -> dict[str, Budget]:
+        with self.db_session() as db_session:
+            last_day = monthrange(year, month.value)[1]
+            period_start = datetime(year, month.value, 1)
+            period_end = datetime(year, month.value, last_day)
+            
+            budgets: list[StoredBudget] = (
+                db_session.query(StoredBudget)
+                .filter(StoredBudget.fill_scope == scope.scope_id)
+                .filter(StoredBudget.start_date <= period_end)
+                .filter(
+                    (StoredBudget.end_date.is_(None)) | (StoredBudget.end_date >= period_start)
+                )
+                .all()
+            )
+            return {b.category_code: b.to_entity_budget() for b in budgets}
 
     def get_monthly_report_by_user(
         self, months: list[Month], year: int, scope: FillScope
@@ -303,10 +321,15 @@ class CardFillService:
 
     def get_budget_for_category(self, category: Category, scope: FillScope) -> Optional[Budget]:
         with self.db_session() as db_session:
+            now = datetime.now()
             budget = (
                 db_session.query(StoredBudget)
                 .filter(StoredBudget.category_code == category.code)
                 .filter(StoredBudget.fill_scope == scope.scope_id)
+                .filter(StoredBudget.start_date <= now)
+                .filter(
+                    (StoredBudget.end_date.is_(None)) | (StoredBudget.end_date >= now)
+                )
                 .one_or_none()
             )
             if budget:
@@ -315,9 +338,14 @@ class CardFillService:
 
     def list_budgets(self, scope: FillScope) -> list[Budget]:
         with self.db_session() as db_session:
+            now = datetime.now()
             budgets: list[StoredBudget] = (
                 db_session.query(StoredBudget)
                 .filter(StoredBudget.fill_scope == scope.scope_id)
+                .filter(StoredBudget.start_date <= now)
+                .filter(
+                    (StoredBudget.end_date.is_(None)) | (StoredBudget.end_date >= now)
+                )
                 .all()
             )
             return [sb.to_entity_budget() for sb in budgets]

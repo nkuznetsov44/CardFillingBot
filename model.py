@@ -179,6 +179,8 @@ class StoredBudget(Base):
     monthly_limit = Column("monthly_limit", Float)
     quarter_limit = Column("quarter_limit", Float)
     year_limit = Column("year_limit", Float)
+    start_date = Column("start_date", DateTime)
+    end_date = Column("end_date", DateTime, nullable=True)
 
     def to_entity_budget(self) -> Budget:
         return Budget(
@@ -186,6 +188,8 @@ class StoredBudget(Base):
             scope=self.scope.to_entity_fill_scope(),
             category=self.category.to_entity_category(),
             monthly_limit=self.monthly_limit,
+            start_date=self.start_date,
+            end_date=self.end_date,
             quarter_limit=self.quarter_limit,
             year_limit=self.year_limit,
         )
