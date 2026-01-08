@@ -151,6 +151,8 @@ class Budget:
     scope: FillScope
     category: Category
     monthly_limit: float
+    start_date: datetime
+    end_date: Optional[datetime] = None
     quarter_limit: Optional[float] = None
     year_limit: Optional[float] = None
 
