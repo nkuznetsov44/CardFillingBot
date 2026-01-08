@@ -35,3 +35,46 @@ check (
         (end_date IS NULL OR (MONTH(end_date) = 12 AND DAY(end_date) = 31))
     )
 );
+
+DROP TRIGGER IF EXISTS trg_budget_check_overlap_insert;
+
+CREATE TRIGGER trg_budget_check_overlap_insert
+BEFORE INSERT ON budget
+FOR EACH ROW
+BEGIN
+    DECLARE overlap_count INT;
+    
+    SELECT COUNT(*) INTO overlap_count
+    FROM budget
+    WHERE fill_scope = NEW.fill_scope
+      AND category_code = NEW.category_code
+      AND NEW.start_date <= COALESCE(end_date, '9999-12-31')
+      AND COALESCE(NEW.end_date, '9999-12-31') >= start_date;
+    
+    IF overlap_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Budget periods cannot overlap for the same scope and category';
+    END IF;
+END;
+
+DROP TRIGGER IF EXISTS trg_budget_check_overlap_update;
+
+CREATE TRIGGER trg_budget_check_overlap_update
+BEFORE UPDATE ON budget
+FOR EACH ROW
+BEGIN
+    DECLARE overlap_count INT;
+    
+    SELECT COUNT(*) INTO overlap_count
+    FROM budget
+    WHERE id != NEW.id
+      AND fill_scope = NEW.fill_scope
+      AND category_code = NEW.category_code
+      AND NEW.start_date <= COALESCE(end_date, '9999-12-31')
+      AND COALESCE(NEW.end_date, '9999-12-31') >= start_date;
+    
+    IF overlap_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Budget periods cannot overlap for the same scope and category';
+    END IF;
+END;
