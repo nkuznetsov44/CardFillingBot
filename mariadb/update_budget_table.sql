@@ -1,9 +1,6 @@
 alter table budget add column start_date date not null default '2025-01-01';
 alter table budget add column end_date date null;
 
-alter table budget add column start_date date not null default '2025-01-01';
-alter table budget add column end_date date null;
-
 alter table budget add constraint chk_budget_exactly_one_limit
 check (
     (monthly_limit IS NOT NULL AND quarter_limit IS NULL AND year_limit IS NULL) OR
