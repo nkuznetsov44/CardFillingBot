@@ -19,4 +19,6 @@ init_routes(app, card_fill_service)
 
 if __name__ == '__main__':
     logger.info(f"Starting web application on {settings.webapp_host}:{settings.webapp_port}")
-    app.run(host=settings.webapp_host, port=settings.webapp_port, debug=True)
+    debug_mode = settings.web_dev_mode
+    logger.info(f"Debug mode: {debug_mode}")
+    app.run(host=settings.webapp_host, port=settings.webapp_port, debug=debug_mode)

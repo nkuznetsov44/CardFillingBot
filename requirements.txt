@@ -11,6 +11,7 @@ cryptography==44.0.0
 emoji==2.9.0
 Flask==3.0.0
 flask-session==0.6.0
+gunicorn==21.2.0
 fonttools==4.47.0
 frozenlist==1.4.1
 greenlet==3.0.3
