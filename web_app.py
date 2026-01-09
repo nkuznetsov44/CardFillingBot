@@ -7,6 +7,8 @@ app = Flask(__name__, template_folder='web/templates')
 app.config['SECRET_KEY'] = settings.web_secret_key
 app.config['SESSION_TYPE'] = 'filesystem'
 
+app.jinja_env.globals.update(min=min, max=max)
+
 card_fill_service = CardFillService()
 
 logging.basicConfig(level=logging.getLevelName(settings.log_level))
