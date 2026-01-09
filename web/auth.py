@@ -38,7 +38,7 @@ def admin_required(f):
             return redirect(url_for('login', next=request.url))
         
         telegram_user = session.get('telegram_user')
-        if telegram_user.get('id') != settings.admin_user_id:
+        if telegram_user.get('id') not in settings.admin_user_ids:
             return "Access denied. Admin privileges required.", 403
         
         return f(*args, **kwargs)
