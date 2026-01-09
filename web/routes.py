@@ -16,9 +16,9 @@ def init_routes(app, card_fill_service: CardFillService):
     def login():
         return render_template('login.html', bot_username=settings.telegram_bot_username, dev_mode=settings.web_dev_mode)
     
-    @app.route('/auth/telegram', methods=['POST'])
+    @app.route('/auth/telegram', methods=['GET'])
     def telegram_auth():
-        auth_data = request.form.to_dict()
+        auth_data = request.args.to_dict()
         
         if verify_telegram_auth(auth_data):
             session['telegram_user'] = {
