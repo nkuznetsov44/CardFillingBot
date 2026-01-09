@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Список бюджетов{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Список бюджетов</h1>
+    <a href="{{ url_for('new_budget') }}" class="btn btn-primary">+ Создать бюджет</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" action="{{ url_for('list_budgets') }}" class="row g-3">
+            <div class="col-md-5">
+                <label for="scope_id" class="form-label">Фильтр по scope:</label>
+                <select name="scope_id" id="scope_id" class="form-select">
+                    <option value="">Все scope's</option>
+                    {% for scope in scopes %}
+                    <option value="{{ scope.scope_id }}" {% if selected_scope_id == scope.scope_id %}selected{% endif %}>
+                        Scope {{ scope.scope_id }} (Chat: {{ scope.chat_id }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label for="category_code" class="form-label">Фильтр по категории:</label>
+                <select name="category_code" id="category_code" class="form-select">
+                    <option value="">Все категории</option>
+                    {% for category in categories %}
+                    <option value="{{ category.code }}" {% if selected_category_code == category.code %}selected{% endif %}>
+                        {{ category.get_emoji() }} {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100">Применить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if budgets_with_usage %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Категория</th>
+                <th>Scope</th>
+                <th>Тип лимита</th>
+                <th>Лимит</th>
+                <th>Использование</th>
+                <th>Период</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in budgets_with_usage %}
+            {% set budget = item.budget %}
+            {% set usage = item.usage %}
+            <tr>
+                <td>
+                    <span class="fs-4">{{ budget.category.get_emoji() }}</span>
+                    {{ budget.category.name }}
+                </td>
+                <td>
+                    <small class="text-muted">Scope {{ budget.scope.scope_id }}</small><br>
+                    Chat: {{ budget.scope.chat_id }}
+                </td>
+                <td>
+                    {% if budget.monthly_limit %}
+                        <span class="badge bg-info">Месяц</span>
+                    {% elif budget.quarter_limit %}
+                        <span class="badge bg-warning">Квартал</span>
+                    {% elif budget.year_limit %}
+                        <span class="badge bg-success">Год</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if budget.monthly_limit %}
+                        {{ "{:,.0f}".format(budget.monthly_limit) }} ₽
+                    {% elif budget.quarter_limit %}
+                        {{ "{:,.0f}".format(budget.quarter_limit) }} ₽
+                    {% elif budget.year_limit %}
+                        {{ "{:,.0f}".format(budget.year_limit) }} ₽
+                    {% endif %}
+                </td>
+                <td>
+                    {% if usage %}
+                        {% set limit = budget.monthly_limit or budget.quarter_limit or budget.year_limit %}
+                        {% set amount = usage.amount %}
+                        {% set percent = (amount / limit * 100) if limit > 0 else 0 %}
+                        
+                        <div class="mb-1">
+                            <small>{{ "{:,.0f}".format(amount) }} / {{ "{:,.0f}".format(limit) }} ₽</small>
+                        </div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar {% if percent > 90 %}bg-danger{% elif percent > 75 %}bg-warning{% else %}bg-success{% endif %}"
+                                 role="progressbar"
+                                 style="width: {{ min(percent, 100) }}%"
+                                 aria-valuenow="{{ percent }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                                {{ "{:.0f}".format(percent) }}%
+                            </div>
+                        </div>
+                    {% else %}
+                        <span class="text-muted">Нет данных</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <small>
+                        {{ budget.start_date.strftime('%d.%m.%Y') }}
+                        {% if budget.end_date %}
+                        - {{ budget.end_date.strftime('%d.%m.%Y') }}
+                        {% else %}
+                        - <em>∞</em>
+                        {% endif %}
+                    </small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{{ url_for('edit_budget', budget_id=budget.id) }}" class="btn btn-outline-primary">
+                            Изменить
+                        </a>
+                        <button type="button" class="btn btn-outline-danger" 
+                                onclick="confirmDelete({{ budget.id }})">
+                            Удалить
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    <h4 class="alert-heading">Бюджеты не найдены</h4>
+    <p>Нет бюджетов, соответствующих выбранным фильтрам.</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{{ url_for('new_budget') }}" class="alert-link">Создайте новый бюджет</a>
+    </p>
+</div>
+{% endif %}
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Подтверждение удаления</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Вы уверены, что хотите удалить этот бюджет?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(budgetId) {
+    const deleteForm = document.getElementById('deleteForm');
+    deleteForm.action = `/budgets/${budgetId}/delete`;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

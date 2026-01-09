@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Редактировать бюджет{% else %}Создать бюджет{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">{% if is_edit %}Редактировать бюджет{% else %}Создать новый бюджет{% endif %}</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" 
+                      action="{% if is_edit %}{{ url_for('update_budget', budget_id=budget.id) }}{% else %}{{ url_for('create_budget') }}{% endif %}"
+                      id="budgetForm">
+                    
+                    <div class="mb-3">
+                        <label for="scope_id" class="form-label">Scope *</label>
+                        <select name="scope_id" id="scope_id" class="form-select" required>
+                            <option value="">Выберите scope</option>
+                            {% for scope in scopes %}
+                            <option value="{{ scope.scope_id }}" 
+                                    {% if is_edit and budget.scope.scope_id == scope.scope_id %}selected{% endif %}>
+                                Scope {{ scope.scope_id }} (Chat: {{ scope.chat_id }}, Type: {{ scope.scope_type }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="category_code" class="form-label">Категория *</label>
+                        <select name="category_code" id="category_code" class="form-select" required>
+                            <option value="">Выберите категорию</option>
+                            {% for category in categories %}
+                            <option value="{{ category.code }}"
+                                    {% if is_edit and budget.category.code == category.code %}selected{% endif %}>
+                                {{ category.get_emoji() }} {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Тип лимита *</label>
+                        <div class="btn-group w-100" role="group" id="limitTypeGroup">
+                            <input type="radio" class="btn-check" name="limit_type" id="monthly" value="monthly" 
+                                   {% if not is_edit or budget.monthly_limit %}checked{% endif %}>
+                            <label class="btn btn-outline-primary" for="monthly">Месячный</label>
+                            
+                            <input type="radio" class="btn-check" name="limit_type" id="quarter" value="quarter"
+                                   {% if is_edit and budget.quarter_limit %}checked{% endif %}>
+                            <label class="btn btn-outline-primary" for="quarter">Квартальный</label>
+                            
+                            <input type="radio" class="btn-check" name="limit_type" id="year" value="year"
+                                   {% if is_edit and budget.year_limit %}checked{% endif %}>
+                            <label class="btn btn-outline-primary" for="year">Годовой</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="limit_amount" class="form-label">Сумма лимита *</label>
+                        <div class="input-group">
+                            <input type="number" name="limit_amount" id="limit_amount" 
+                                   class="form-control" step="0.01" min="0.01" required
+                                   value="{% if is_edit %}{{ budget.monthly_limit or budget.quarter_limit or budget.year_limit }}{% endif %}">
+                            <span class="input-group-text">₽</span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Дата начала *</label>
+                            <input type="date" name="start_date" id="start_date" 
+                                   class="form-control" required
+                                   value="{% if is_edit %}{{ budget.start_date.strftime('%Y-%m-%d') }}{% endif %}">
+                            <small class="form-text text-muted" id="startDateHelp">
+                                Для месячного бюджета: первый день месяца
+                            </small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">Дата окончания (опционально)</label>
+                            <input type="date" name="end_date" id="end_date" class="form-control"
+                                   value="{% if is_edit and budget.end_date %}{{ budget.end_date.strftime('%Y-%m-%d') }}{% endif %}">
+                            <small class="form-text text-muted" id="endDateHelp">
+                                Для месячного бюджета: последний день месяца
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info" role="alert">
+                        <strong>Важно:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Месячный бюджет: дата начала - первый день месяца, дата окончания - последний день месяца</li>
+                            <li>Квартальный бюджет: дата начала - первый день квартала (1 янв, 1 апр, 1 июл, 1 окт)</li>
+                            <li>Годовой бюджет: дата начала - 1 января</li>
+                            <li>Если дата окончания не указана, бюджет будет действовать бессрочно</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            {% if is_edit %}Сохранить изменения{% else %}Создать бюджет{% endif %}
+                        </button>
+                        <a href="{{ url_for('list_budgets') }}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const limitTypeInputs = document.querySelectorAll('input[name="limit_type"]');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const startDateHelp = document.getElementById('startDateHelp');
+    const endDateHelp = document.getElementById('endDateHelp');
+    
+    function updateDateHelp() {
+        const limitType = document.querySelector('input[name="limit_type"]:checked').value;
+        
+        switch(limitType) {
+            case 'monthly':
+                startDateHelp.textContent = 'Для месячного бюджета: первый день месяца';
+                endDateHelp.textContent = 'Для месячного бюджета: последний день месяца';
+                break;
+            case 'quarter':
+                startDateHelp.textContent = 'Для квартального бюджета: 1 января, 1 апреля, 1 июля или 1 октября';
+                endDateHelp.textContent = 'Для квартального бюджета: последний день квартала';
+                break;
+            case 'year':
+                startDateHelp.textContent = 'Для годового бюджета: 1 января';
+                endDateHelp.textContent = 'Для годового бюджета: 31 декабря';
+                break;
+        }
+    }
+    
+    limitTypeInputs.forEach(input => {
+        input.addEventListener('change', updateDateHelp);
+    });
+    
+    updateDateHelp();
+    
+    document.getElementById('budgetForm').addEventListener('submit', function(e) {
+        const limitType = document.querySelector('input[name="limit_type"]:checked').value;
+        const startDate = new Date(startDateInput.value);
+        const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+        
+        let isValid = true;
+        let errorMsg = '';
+        
+        if (limitType === 'monthly' && startDate.getDate() !== 1) {
+            isValid = false;
+            errorMsg = 'Для месячного бюджета дата начала должна быть первым днем месяца';
+        }
+        
+        if (limitType === 'quarter') {
+            const month = startDate.getMonth();
+            if (![0, 3, 6, 9].includes(month) || startDate.getDate() !== 1) {
+                isValid = false;
+                errorMsg = 'Для квартального бюджета дата начала должна быть 1 января, 1 апреля, 1 июля или 1 октября';
+            }
+        }
+        
+        if (limitType === 'year' && (startDate.getMonth() !== 0 || startDate.getDate() !== 1)) {
+            isValid = false;
+            errorMsg = 'Для годового бюджета дата начала должна быть 1 января';
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert(errorMsg);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -17,6 +17,7 @@ if args.dotenv:
 class _Settings:
     def __init__(self):
         self.telegram_token = os.getenv("TELEGRAM_TOKEN")
+        self.telegram_bot_username = os.getenv("TELEGRAM_BOT_USERNAME")
 
         self.mysql_user = os.getenv("MYSQL_USER")
         self.mysql_password = os.getenv("MYSQL_PASSWORD")
@@ -36,6 +37,9 @@ class _Settings:
 
         self.webapp_host = os.getenv("WEBAPP_HOST", "0.0.0.0")
         self.webapp_port = int(os.getenv("WEBAPP_PORT", "8000"))
+
+        self.web_secret_key = os.getenv("WEB_SECRET_KEY", "dev-secret-key-change-in-production")
+        self.web_dev_mode = os.getenv("WEB_DEV_MODE", "false").lower() == "true"
 
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
 

@@ -468,6 +468,64 @@ class CardFillService:
             for month in months:
                 for user in all_users:
                     amount = monthly_data[month].get(user, 0)
-                    if amount > 0:  # Only include users with income in this month
+                    if amount > 0:
                         ret[month].append(UserSumOverPeriod(user=user, amount=amount))
             return ret
+
+    def create_budget(self, budget: Budget) -> Budget:
+        with self.db_session() as db_session:
+            stored_budget = StoredBudget(
+                fill_scope=budget.scope.scope_id,
+                category_code=budget.category.code,
+                monthly_limit=budget.monthly_limit,
+                quarter_limit=budget.quarter_limit,
+                year_limit=budget.year_limit,
+                start_date=budget.start_date,
+                end_date=budget.end_date,
+            )
+            db_session.add(stored_budget)
+            db_session.commit()
+            self.logger.info(f"Created budget {stored_budget}")
+            return stored_budget.to_entity_budget()
+
+    def update_budget(self, budget: Budget) -> Budget:
+        with self.db_session() as db_session:
+            stored_budget = db_session.query(StoredBudget).get(budget.id)
+            if not stored_budget:
+                raise ValueError(f"Budget with id {budget.id} not found")
+            
+            stored_budget.fill_scope = budget.scope.scope_id
+            stored_budget.category_code = budget.category.code
+            stored_budget.monthly_limit = budget.monthly_limit
+            stored_budget.quarter_limit = budget.quarter_limit
+            stored_budget.year_limit = budget.year_limit
+            stored_budget.start_date = budget.start_date
+            stored_budget.end_date = budget.end_date
+            
+            db_session.add(stored_budget)
+            db_session.commit()
+            self.logger.info(f"Updated budget {stored_budget}")
+            return stored_budget.to_entity_budget()
+
+    def delete_budget(self, budget_id: int) -> None:
+        with self.db_session() as db_session:
+            stored_budget = db_session.query(StoredBudget).get(budget_id)
+            if not stored_budget:
+                raise ValueError(f"Budget with id {budget_id} not found")
+            
+            stored_budget.end_date = datetime.now()
+            db_session.add(stored_budget)
+            db_session.commit()
+            self.logger.info(f"Soft-deleted budget {budget_id} by setting end_date")
+
+    def get_budget_by_id(self, budget_id: int) -> Optional[Budget]:
+        with self.db_session() as db_session:
+            stored_budget = db_session.query(StoredBudget).get(budget_id)
+            if stored_budget:
+                return stored_budget.to_entity_budget()
+            return None
+
+    def list_all_scopes(self) -> list[FillScope]:
+        with self.db_session() as db_session:
+            scopes = db_session.query(StoredFillScope).all()
+            return [scope.to_entity_fill_scope() for scope in scopes]
