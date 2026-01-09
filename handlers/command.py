@@ -10,7 +10,7 @@ from settings import settings
 class ServiceCommandMessageHandler(BaseMessageHandler[ServiceCommandMessage]):
     async def handle(self, message: ServiceCommandMessage) -> None:
         if message.data == ServiceCommandType.DUMP:
-            if message.original_message.from_user.id == settings.admin_user_id:
+            if message.original_message.from_user.id in settings.admin_user_ids:
                 fills = self.card_fill_service.get_all_fills()
                 await self.bot.send_document(
                     chat_id=message.original_message.chat.id,

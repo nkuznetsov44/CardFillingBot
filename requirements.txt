@@ -9,6 +9,9 @@ contourpy==1.2.0
 cycler==0.12.1
 cryptography==44.0.0
 emoji==2.9.0
+Flask==3.0.0
+flask-session==0.6.0
+gunicorn==21.2.0
 fonttools==4.47.0
 frozenlist==1.4.1
 greenlet==3.0.3
@@ -18,7 +21,7 @@ magic-filter==1.0.12
 marshmallow==3.20.1
 marshmallow-dataclass==8.6.0
 matplotlib==3.8.2
-multidict==6.0.4
+multidict==6.1.0
 mypy-extensions==1.0.0
 numpy==1.26.2
 packaging==23.2

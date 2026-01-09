@@ -5,3 +5,5 @@ mariadb/
 redis/
 kubernetes/
 venv/
+certbot/
+nginx/

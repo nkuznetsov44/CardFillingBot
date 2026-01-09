@@ -43,3 +43,46 @@ services:
       - TZ=${TZ}
       - LOG_LEVEL=${LOG_LEVEL}
       - ADMIN_USER_ID=${ADMIN_USER_ID}
+  webui:
+    build:
+      dockerfile: Dockerfile-web
+      context: .
+    image: nkuznetsov44/cardfillingbot-web
+    container_name: cardfillingbot-web
+    depends_on:
+      - mariadb
+    restart: on-failure
+    environment:
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
+      - ADMIN_USER_ID=${ADMIN_USER_ID}
+      - WEB_SECRET_KEY=${WEB_SECRET_KEY}
+      - WEBAPP_PORT=5000
+      - TZ=${TZ}
+      - LOG_LEVEL=${LOG_LEVEL}
+  nginx:
+    image: nginx:alpine
+    container_name: cardfillingbot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - webui
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+  certbot:
+    image: certbot/certbot
+    container_name: cardfillingbot-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"

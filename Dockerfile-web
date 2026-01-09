@@ -1,0 +1,15 @@
+FROM python:3.11-alpine
+
+RUN apk add g++ jpeg-dev zlib-dev libjpeg make
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+RUN pip install --upgrade pip
+COPY ./requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+WORKDIR .
+
+CMD ["python3", "-m", "gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "web_app:app"]

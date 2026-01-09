@@ -1,22 +1,19 @@
 from typing import Optional, Any
 import os
 from entities import AppMode
-import argparse
+import sys
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--dotenv', action='store_true')
-args = parser.parse_args()
-
-if args.dotenv:
+if '--dotenv' in sys.argv:
     from dotenv import load_dotenv
     load_dotenv()
-    print('Loaded dotenv', f'{os.environ}')
+    print('Loaded dotenv')
 
 
 class _Settings:
     def __init__(self):
         self.telegram_token = os.getenv("TELEGRAM_TOKEN")
+        self.telegram_bot_username = os.getenv("TELEGRAM_BOT_USERNAME")
 
         self.mysql_user = os.getenv("MYSQL_USER")
         self.mysql_password = os.getenv("MYSQL_PASSWORD")
@@ -37,12 +34,15 @@ class _Settings:
         self.webapp_host = os.getenv("WEBAPP_HOST", "0.0.0.0")
         self.webapp_port = int(os.getenv("WEBAPP_PORT", "8000"))
 
+        self.web_secret_key = os.getenv("WEB_SECRET_KEY", "dev-secret-key-change-in-production")
+        self.web_dev_mode = os.getenv("WEB_DEV_MODE", "false").lower() == "true"
+
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
 
         self.tz = os.getenv("TZ", "Europe/Moscow")
 
         self.pay_silivri_scope_id = 5
-        self.admin_user_id = self._maybe_int(os.getenv("ADMIN_USER_ID"))
+        self.admin_user_ids = self._parse_admin_ids(os.getenv("ADMIN_USER_ID"))
 
         self.app_mode = AppMode(os.getenv("APP_MODE", "POLLING"))
 
@@ -51,6 +51,13 @@ class _Settings:
         if val is None:
             return None
         return int(val)
+
+    @classmethod
+    def _parse_admin_ids(cls, val: Optional[str]) -> list[int]:
+        if val is None:
+            return []
+        ids_str = [s.strip() for s in val.split(',')]
+        return [int(id_str) for id_str in ids_str if id_str]
 
     @classmethod
     def _any_none(cls, *vals: Any) -> bool:
