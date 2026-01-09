@@ -1,17 +1,13 @@
 from typing import Optional, Any
 import os
 from entities import AppMode
-import argparse
+import sys
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--dotenv', action='store_true')
-args = parser.parse_args()
-
-if args.dotenv:
+if '--dotenv' in sys.argv:
     from dotenv import load_dotenv
     load_dotenv()
-    print('Loaded dotenv', f'{os.environ}')
+    print('Loaded dotenv')
 
 
 class _Settings:
