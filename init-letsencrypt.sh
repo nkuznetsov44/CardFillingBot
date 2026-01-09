@@ -24,7 +24,7 @@ docker compose run --rm --entrypoint "\
 echo
 
 echo "### Starting nginx with HTTP-only config..."
-rm -f ./nginx/conf.d/cardfillingbot.conf
+rm -f ./nginx/conf.d/default.conf
 cp ./nginx/conf.d/cardfillingbot-http.conf ./nginx/conf.d/default.conf
 docker compose up --force-recreate -d nginx
 echo
