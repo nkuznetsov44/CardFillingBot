@@ -152,7 +152,8 @@ def category_with_limits_table(data: list[CategoryTableRowData], header: str, ne
     tbl.hrules = prettytable.HEADER
     tbl.left_padding_width = 0
     tbl.right_padding_width = 1
-    tbl.field_names = [CAT_EMOJI_FIELD_NAME, "Категория", "Usage", "Лимит", STATISTICS_FIELD_NAME]
+    # tbl.field_names = [CAT_EMOJI_FIELD_NAME, "Категория", "Usage", "Лимит", STATISTICS_FIELD_NAME]
+    tbl.field_names = [CAT_EMOJI_FIELD_NAME, "Категория", "Usage", "Лимит"]
     tbl.align["Категория"] = "l"
     tbl.align["Usage"] = "r"
     tbl.align["Лимит"] = "r"
@@ -170,7 +171,7 @@ def category_with_limits_table(data: list[CategoryTableRowData], header: str, ne
             r.name,
             f'{r.usage:.0f}',
             f'{r.limit:.0f}' if r.limit else '-',
-            _fmt_usage(r.usage, r.limit),
+            # _fmt_usage(r.usage, r.limit),  # I commented this line because it does not fit line width and max message length is exceeded
         ])
 
     return f'```{header}\n{tbl.get_string()}```'
@@ -219,7 +220,7 @@ def format_by_category_block(data: list[CategorySumOverPeriod]) -> str:
     quarter_tbl = category_with_limits_table(data=quarter_table_data, header='Квартал')
     year_tbl = category_with_limits_table(data=year_table_data, header='Год')
 
-    return '\n\n'.join([monthly_tbl, quarter_tbl, year_tbl])
+    return '\n'.join([monthly_tbl, quarter_tbl, year_tbl])
 
 
 def format_monthly_report(
